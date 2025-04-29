@@ -7,8 +7,8 @@ import logging
 from utils.response import session_token_invalid_response
 from utils.response import create_response
 from utils.state import get_state
-from utils.security import verify_session_token
 from use_cases.create_farm_use_case import create_farm_use_case
+from use_cases.verify_session_token_use_case import verify_session_token
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
     - **401 Unauthorized**: Si el token de sesión es inválido o el usuario no tiene permisos.
     - **500 Internal Server Error**: Si ocurre un error al intentar crear la finca o asignar el usuario.
     """
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -111,7 +111,7 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
     - **500**: Error interno del servidor durante la consulta.
     """
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -198,7 +198,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
     - **500**: Error interno del servidor durante la actualización.
     """
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -312,7 +312,7 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
     ```
     """
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -391,7 +391,7 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
 
     """
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return create_response("error", "Token de sesión inválido o usuario no encontrado")

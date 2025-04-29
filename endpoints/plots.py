@@ -3,10 +3,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties
 from dataBase import get_db_session
-import logging
+from use_cases.verify_session_token_use_case import verify_session_token
 from utils.response import session_token_invalid_response
 from utils.response import create_response
 from utils.state import get_state
+import logging
 
 router = APIRouter()
 
@@ -51,7 +52,7 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
     """
 
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -168,7 +169,7 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
         dict: Respuesta indicando el estado del proceso de actualización del lote.
     """
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -273,7 +274,7 @@ def update_plot_location(request: UpdatePlotLocationRequest, session_token: str,
         dict: Respuesta indicando el estado del proceso de actualización de la ubicación del lote.
     """
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -356,7 +357,7 @@ def list_plots(farm_id: int, session_token: str, db: Session = Depends(get_db_se
     - **500**: Error al obtener la lista de lotes.
     """
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -435,7 +436,7 @@ def get_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_sess
     """
 
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
@@ -511,7 +512,7 @@ def delete_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_s
     """
 
     # Verificar el token de sesión
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return create_response("error", "Token de sesión inválido o usuario no encontrado")

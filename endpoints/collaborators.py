@@ -3,11 +3,11 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any
 from pydantic import BaseModel, EmailStr, Field
 from models.models import Farms, UserRoleFarm
-from utils.security import verify_session_token
 from dataBase import get_db_session
 from utils.response import create_response, session_token_invalid_response
 from sqlalchemy import func
 from utils.state import get_state
+from use_cases.verify_session_token_use_case import verify_session_token
 import logging
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ def list_collaborators(
     """
 
     # 1. Verificar el session_token y obtener el usuario autenticado
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         return session_token_invalid_response()
 
@@ -233,7 +233,7 @@ def edit_collaborator_role(
         )
 
     # 1. Verificar el session_token y obtener el usuario autenticado
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         return session_token_invalid_response()
 
@@ -495,7 +495,7 @@ def delete_collaborator(
         )
 
     # 2. Verificar el session_token y obtener el usuario autenticado
-    user = verify_session_token(session_token, db)
+    user = verify_session_token(session_token)
     if not user:
         return session_token_invalid_response()
 
