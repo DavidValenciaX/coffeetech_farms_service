@@ -3,12 +3,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from models.models import Farms, UserRoleFarm, AreaUnits, FarmStates, UserRoleFarmStates
 from dataBase import get_db_session
-import logging
 from utils.response import session_token_invalid_response
 from utils.response import create_response
 from utils.state import get_state
 from use_cases.create_farm_use_case import create_farm_use_case
 from use_cases.verify_session_token_use_case import verify_session_token
+from use_cases.list_farms_use_case import list_farms_use_case
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -87,82 +88,13 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
 def list_farm(session_token: str, db: Session = Depends(get_db_session)):
     """
     Endpoint para listar las fincas activas asociadas a un usuario autenticado mediante un token de sesión.
-
-    **Parámetros**:
-    - **session_token**: Token de sesión proporcionado por el usuario para autenticarse.
-    - **db**: Sesión de base de datos proporcionada por FastAPI a través de la dependencia.
-
-    **Descripción**:
-    1. **Verificar sesión**: 
-       Se verifica el token de sesión del usuario. Si no es válido, se devuelve una respuesta de token inválido.
-    
-    2. **Obtener estados activos**: 
-       Se buscan los estados "Activo" tanto para las fincas como para la relación `user_role_farm` que define el rol del usuario en la finca.
-    
-    3. **Realizar la consulta**: 
-       Se realiza una consulta a la base de datos para obtener las fincas activas asociadas al usuario autenticado, filtrando por estado "Activo" tanto en la finca como en la relación `user_role_farm`.
-    
-    4. **Construir la respuesta**: 
-       Se construye una lista de las fincas obtenidas, incluyendo detalles como el nombre de la finca, área, unidad de medida, estado y el rol del usuario.
-
-    **Respuestas**:
-    - **200**: Lista de fincas obtenida exitosamente.
-    - **400**: Error al obtener los estados activos para las fincas o la relación `user_role_farm`.
-    - **500**: Error interno del servidor durante la consulta.
     """
-    # Verificar el token de sesión
     user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
+    return list_farms_use_case(user, db, ListFarmResponse)
 
-    # Obtener el state "Activo" para el tipo "Farms"
-    active_farm_state = get_state(db, "Activo", "Farms")
-    if not active_farm_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
-        return create_response("error", "Estado 'Activo' no encontrado para Farms", status_code=400)
-
-    # Obtener el state "Activo" para el tipo "user_role_farm"
-    active_urf_state = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
-        return create_response("error", "Estado 'Activo' no encontrado para user_role_farm", status_code=400)
-
-    try:
-        # Realizar la consulta con los filtros adicionales de estado activo
-        farms = db.query(Farms, AreaUnits, FarmStates, Roles).select_from(UserRoleFarm).join(
-            Farms, UserRoleFarm.farm_id == Farms.farm_id
-        ).join(
-            AreaUnits, Farms.area_unit_id == AreaUnits.area_unit_id
-        ).join(
-            FarmStates, Farms.farm_state_id == FarmStates.farm_state_id
-        ).join(
-            Roles, UserRoleFarm.role_id == Roles.role_id
-        ).filter(
-            UserRoleFarm.user_id == user.user_id,
-            UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
-            Farms.farm_state_id == active_farm_state.farm_state_id
-        ).all()
-
-        farm_list = []
-        for farm, area_unit, farm_state, role in farms:
-            farm_list.append(ListFarmResponse(
-                farm_id=farm.farm_id,
-                name=farm.name,
-                area=farm.area,
-                area_unit=area_unit.name,
-                farm_state=farm_state.name,
-                role=role.name
-            ))
-
-        return create_response("success", "Lista de fincas obtenida exitosamente", {"farms": farm_list})
-
-    except Exception as e:
-        logger.error("Error al obtener la lista de fincas: %s", str(e))
-        raise HTTPException(status_code=500, detail=f"Error al obtener la lista de fincas: {str(e)}")
-
-    
-    
 @router.post("/update-farm")
 def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
     """
