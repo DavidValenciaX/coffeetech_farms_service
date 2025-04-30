@@ -5,7 +5,7 @@ from dataBase import get_db_session
 from utils.response import session_token_invalid_response
 from utils.response import create_response
 from use_cases.create_farm_use_case import create_farm_use_case
-from use_cases.verify_session_token_use_case import verify_session_token
+from adapters.user_client import verify_session_token
 from use_cases.list_farms_use_case import list_farms_use_case
 from use_cases.update_farm_use_case import update_farm_use_case
 from use_cases.get_farm_use_case import get_farm_use_case

@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from models.models import Farms, UserRoleFarm, AreaUnits, FarmStates
 from utils.response import create_response
 from utils.state import get_state
-from use_cases.get_role_name_use_case import get_role_name_for_user_role
+from adapters.user_client import get_role_name_for_user_role
 
 logger = logging.getLogger(__name__)
 

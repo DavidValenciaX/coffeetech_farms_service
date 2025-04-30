@@ -5,7 +5,7 @@ from models.models import Farms, UserRoleFarm, AreaUnits
 from utils.response import create_response
 from utils.state import get_state
 import logging
-from use_cases.get_user_role_ids_use_case import get_user_role_ids
+from adapters.user_client import get_user_role_ids
 import os
 from dotenv import load_dotenv
 import requests

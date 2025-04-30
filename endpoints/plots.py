@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties
 from dataBase import get_db_session
-from use_cases.verify_session_token_use_case import verify_session_token
+from adapters.user_client import verify_session_token
 from utils.response import session_token_invalid_response
 from utils.response import create_response
 from utils.state import get_state

@@ -7,7 +7,7 @@ from dataBase import get_db_session
 from utils.response import create_response, session_token_invalid_response
 from sqlalchemy import func
 from utils.state import get_state
-from use_cases.verify_session_token_use_case import verify_session_token
+from adapters.user_client import verify_session_token
 import logging
 
 logger = logging.getLogger(__name__)
