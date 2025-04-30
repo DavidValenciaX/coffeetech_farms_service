@@ -1,13 +1,14 @@
 # Lógica de negocio para la creación de una finca
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-from models.models import Farms, UserRoleFarm, AreaUnits, Roles
+from models.models import Farms, UserRoleFarm, AreaUnits
 from utils.response import create_response
 from utils.state import get_state
 import logging
 from use_cases.get_user_role_ids_use_case import get_user_role_ids
 import os
 from dotenv import load_dotenv
+import requests
 
 # Load environment variables
 load_dotenv(override=True, encoding="utf-8")
@@ -90,23 +91,41 @@ def create_farm_use_case(request, user, db: Session):
         db.refresh(new_farm)
         logger.info("Finca creada exitosamente con ID: %s", new_farm.farm_id)
 
-        # Buscar el rol "Propietario"
-        role = db.query(Roles).filter(Roles.name == "Propietario").first()
-        if not role:
-            logger.error("Rol 'Propietario' no encontrado")
-            raise HTTPException(status_code=400, detail="Rol 'Propietario' no encontrado")
+        # --- Crear UserRole en el servicio de usuarios ---
+        user_service_url = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
+        try:
+            # Solicitud para crear UserRole (usuario-rol "Propietario")
+            response = requests.post(
+                f"{user_service_url}/roles/user-role",
+                json={"user_id": user.user_id, "role_name": "Propietario"},
+                timeout=10
+            )
+            if response.status_code != 201:
+                logger.error("No se pudo crear la relación UserRole en el servicio de usuarios: %s", response.text)
+                db.rollback()
+                return create_response("error", "No se pudo asignar el rol 'Propietario' al usuario", status_code=500)
+            user_role_data = response.json()
+            user_role_id = user_role_data.get("user_role_id")
+            if not user_role_id:
+                logger.error("Respuesta inválida del servicio de usuarios al crear UserRole: %s", user_role_data)
+                db.rollback()
+                return create_response("error", "Respuesta inválida del servicio de usuarios al crear UserRole", status_code=500)
+        except Exception as e:
+            logger.error("Error al comunicarse con el servicio de usuarios: %s", str(e))
+            db.rollback()
+            return create_response("error", "Error al comunicarse con el servicio de usuarios", status_code=500)
 
         # Get active state for UserRoleFarm
         active_urf_state = get_state(db, "Activo", "user_role_farm")
         if not active_urf_state:
             logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
-            raise HTTPException(status_code=400, detail="No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
+            db.rollback()
+            return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
-        # Crear la relación UserRoleFarm
+        # Crear la relación UserRoleFarm usando el user_role_id recibido
         user_role_farm = UserRoleFarm(
-            user_id=user.user_id,
+            user_role_id=user_role_id,
             farm_id=new_farm.farm_id,
-            role_id=role.role_id,
             user_role_farm_state_id=active_urf_state.user_role_farm_state_id
         )
         db.add(user_role_farm)
