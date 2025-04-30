@@ -1,10 +1,14 @@
 import logging
 import httpx
 from typing import Optional
+import os
+from dotenv import load_dotenv
+
+load_dotenv(override=True, encoding="utf-8")
 
 logger = logging.getLogger(__name__)
 
-USER_SERVICE_BASE_URL = "http://localhost:8000/user-service"
+USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
 
 def verify_session_token(session_token: str) -> Optional[dict]:
     """
@@ -13,7 +17,7 @@ def verify_session_token(session_token: str) -> Optional[dict]:
     """
     try:
         with httpx.Client(timeout=5.0) as client:
-            response = client.post(f"{USER_SERVICE_BASE_URL}/session-token-verification", json={"session_token": session_token})
+            response = client.post(f"{USER_SERVICE_URL}/session-token-verification", json={"session_token": session_token})
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status") == "success" and "user" in data.get("data", {}):

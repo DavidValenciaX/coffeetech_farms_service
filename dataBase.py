@@ -5,16 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
-# Función para recargar .env
-def reload_env():
-    """
-    Carga las variables de entorno desde el archivo .env, 
-    sobrescribiendo las existentes si es necesario.
-    """
-    load_dotenv(override=True, encoding='utf-8')
-
-# Cargar variables de entorno
-reload_env()
+load_dotenv(override=True, encoding='utf-8')
 
 DB_HOST = os.getenv("PGHOST")
 DB_PORT = os.getenv("PGPORT")

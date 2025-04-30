@@ -5,6 +5,12 @@ from models.models import Farms, UserRoleFarm, AreaUnits, Roles
 from utils.response import create_response
 from utils.state import get_state
 import logging
+from use_cases.get_user_role_ids_use_case import get_user_role_ids
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv(override=True, encoding="utf-8")
 
 def create_farm_use_case(request, user, db: Session):
     logger = logging.getLogger(__name__)
@@ -40,9 +46,17 @@ def create_farm_use_case(request, user, db: Session):
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
+    # Obtener los user_role_ids desde el microservicio de usuarios
+    user_service_url = os.getenv("USER_SERVICE_URL", "http://localhost:8000")  # Ajusta la URL base según tu entorno
+    try:
+        user_role_ids = get_user_role_ids(user.user_id, user_service_url)
+    except Exception as e:
+        logger.error("No se pudieron obtener los user_role_ids: %s", str(e))
+        return create_response("error", "No se pudieron obtener los roles del usuario", status_code=500)
+
     existing_farm = db.query(Farms).join(UserRoleFarm).filter(
         Farms.name == request.name,
-        UserRoleFarm.user_id == user.user_id,
+        UserRoleFarm.user_role_id.in_(user_role_ids),
         Farms.farm_state_id == active_farm_state.farm_state_id,
         UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
     ).first()
