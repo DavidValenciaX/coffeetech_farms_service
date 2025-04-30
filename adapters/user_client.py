@@ -130,3 +130,18 @@ def create_user_role(user_id: int, role_name: str) -> dict:
         return response
     else:
         raise Exception(f"Error creating user_role for user {user_id} with role '{role_name}': {response}")
+
+def get_role_permissions_for_user_role(user_role_id: int) -> list:
+    """
+    Gets the list of permission names for a given user_role_id from the user service.
+
+    Args:
+        user_role_id (int): ID of the UserRole entry
+
+    Returns:
+        list: List of permission names (str)
+    """
+    response = _make_request(f"/roles/user-role/{user_role_id}/permissions")
+    if response and "permissions" in response:
+        return [perm["name"] for perm in response["permissions"]]
+    return []
