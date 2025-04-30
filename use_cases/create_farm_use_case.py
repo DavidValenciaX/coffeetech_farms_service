@@ -48,9 +48,8 @@ def create_farm_use_case(request, user, db: Session):
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
     # Obtener los user_role_ids desde el microservicio de usuarios
-    user_service_url = os.getenv("USER_SERVICE_URL", "http://localhost:8000")  # Ajusta la URL base según tu entorno
     try:
-        user_role_ids = get_user_role_ids(user.user_id, user_service_url)
+        user_role_ids = get_user_role_ids(user.user_id)
     except Exception as e:
         logger.error("No se pudieron obtener los user_role_ids: %s", str(e))
         return create_response("error", "No se pudieron obtener los roles del usuario", status_code=500)

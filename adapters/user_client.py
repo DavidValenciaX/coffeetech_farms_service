@@ -1,9 +1,8 @@
-import requests
 import logging
-import os
-from dotenv import load_dotenv
+from typing import Optional, Any, Dict, List, Union
 import httpx
-from typing import Optional
+from dotenv import load_dotenv
+import os
 
 # Load environment variables
 load_dotenv(override=True, encoding="utf-8")
@@ -11,8 +10,50 @@ load_dotenv(override=True, encoding="utf-8")
 logger = logging.getLogger(__name__)
 
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
+DEFAULT_TIMEOUT = 10.0
 
-def get_role_name_for_user_role(user_role_id):
+def _make_request(
+    endpoint: str,
+    method: str = "GET",
+    data: Optional[Dict[str, Any]] = None,
+    params: Optional[Dict[str, Any]] = None,
+    timeout: float = DEFAULT_TIMEOUT
+) -> Optional[Dict[str, Any]]:
+    """
+    Base function to make HTTP requests to the user service.
+    
+    Args:
+        endpoint (str): The API endpoint to call (without base URL)
+        method (str): HTTP method to use ('GET', 'POST', etc.)
+        data (dict, optional): JSON data to send in the request body
+        params (dict, optional): Query parameters to include in the request
+        timeout (float): Request timeout in seconds
+        
+    Returns:
+        dict: Response data as dictionary if successful, None otherwise
+    """
+    url = f"{USER_SERVICE_URL}{endpoint}"
+    
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            if method.upper() == "GET":
+                response = client.get(url, params=params)
+            elif method.upper() == "POST":
+                response = client.post(url, json=data)
+            else:
+                logger.error(f"Unsupported HTTP method: {method}")
+                return None
+                
+            if response.status_code in (200, 201):
+                return response.json()
+            else:
+                logger.error(f"Error calling {url}: {response.status_code} - {response.text}")
+                return None
+    except Exception as e:
+        logger.error(f"Exception calling {url}: {str(e)}")
+        return None
+
+def get_role_name_for_user_role(user_role_id: int) -> str:
     """
     Gets the role name associated with a user_role_id by calling the user service API.
     
@@ -22,58 +63,46 @@ def get_role_name_for_user_role(user_role_id):
     Returns:
         str: The name of the role, or "Unknown" if not found
     """
-    user_service_url = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
-    
-    try:
-        response = requests.get(
-            f"{user_service_url}/roles/user-role/{user_role_id}",
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("role_name", "Unknown")
-        else:
-            logger.error(f"Error getting role name: {response.text}")
-            return "Unknown"
-    except Exception as e:
-        logger.error(f"Exception getting role name: {str(e)}")
-        return "Unknown"
+    response = _make_request(f"/roles/user-role/{user_role_id}")
+    return response.get("role_name", "Unknown") if response else "Unknown"
 
-def get_user_role_ids(user_id: int, user_service_url: str):
+def get_user_role_ids(user_id: int) -> List[int]:
     """
-    Consulta los user_role_id de un usuario en el microservicio de usuarios.
+    Retrieves user_role_ids for a user from the users microservice.
 
     Args:
-        user_id (int): ID del usuario.
-        user_service_url (str): URL base del microservicio de usuarios.
+        user_id (int): ID of the user
 
     Returns:
-        list: Lista de user_role_id asociados al usuario.
+        list: List of user_role_ids associated with the user
+        
     Raises:
-        Exception: Si la petición falla o la respuesta es inválida.
+        Exception: If the request fails or response is invalid
     """
-    url = f"{user_service_url}/roles/user-role-ids/{user_id}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        return data.get("user_role_ids", [])
+    response = _make_request(f"/roles/user-role-ids/{user_id}")
+    
+    if response:
+        return response.get("user_role_ids", [])
     else:
-        raise Exception(f"Error al consultar user_role_ids: {response.text}")
+        raise Exception(f"Error retrieving user_role_ids for user {user_id}")
 
-def verify_session_token(session_token: str) -> Optional[dict]:
+def verify_session_token(session_token: str) -> Optional[Dict[str, Any]]:
     """
-    Verifica el token de sesión haciendo una solicitud al servicio de usuarios.
-    Retorna un diccionario con los datos del usuario si es válido, o None si no lo es.
+    Verifies a session token by making a request to the user service.
+    Returns user data if the token is valid, None otherwise.
+    
+    Args:
+        session_token (str): Session token to verify
+        
+    Returns:
+        dict: User data if token is valid, None otherwise
     """
-    try:
-        with httpx.Client(timeout=5.0) as client:
-            response = client.post(f"{USER_SERVICE_URL}/session-token-verification", json={"session_token": session_token})
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("status") == "success" and "user" in data.get("data", {}):
-                    return data["data"]["user"]
-            logger.warning(f"Token inválido o error en la verificación: {response.text}")
-    except Exception as e:
-        logger.error(f"Error al verificar el token de sesión: {e}")
+    response = _make_request(
+        "/session-token-verification", 
+        method="POST", 
+        data={"session_token": session_token}
+    )
+    
+    if response and response.get("status") == "success" and "user" in response.get("data", {}):
+        return response["data"]["user"]
     return None
