@@ -9,6 +9,7 @@ from utils.state import get_state
 from use_cases.create_farm_use_case import create_farm_use_case
 from use_cases.verify_session_token_use_case import verify_session_token
 from use_cases.list_farms_use_case import list_farms_use_case
+from use_cases.update_farm_use_case import update_farm_use_case
 import logging
 
 logger = logging.getLogger(__name__)
@@ -99,130 +100,12 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
 def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
     """
     Endpoint para actualizar la información de una finca asociada a un usuario autenticado.
-
-    **Parámetros**:
-    - **request**: Objeto de tipo `UpdateFarmRequest` que contiene los datos a actualizar de la finca (nombre, área, unidad de medida).
-    - **session_token**: Token de sesión proporcionado por el usuario para autenticarse.
-    - **db**: Sesión de base de datos proporcionada por FastAPI a través de la dependencia.
-
-    **Descripción**:
-    1. **Verificar sesión**: 
-       Se verifica el token de sesión del usuario. Si no es válido, se devuelve una respuesta de token inválido.
-    
-    2. **Verificar asociación de usuario**: 
-       Se verifica si el usuario está asociado con la finca activa que desea actualizar y si tiene el rol adecuado para editar.
-    
-    3. **Verificar permisos de edición**: 
-       Se comprueba si el rol del usuario tiene permisos para editar fincas.
-
-    4. **Validaciones de nombre y área**: 
-       Se valida que el nombre no esté vacío, que no exceda los 50 caracteres y que el área sea mayor que cero. También se valida la unidad de medida.
-
-    5. **Verificar existencia de finca y nombre duplicado**: 
-       Se busca la finca en la base de datos y se verifica si el nuevo nombre ya está en uso por otra finca del mismo usuario.
-
-    6. **Actualizar finca**: 
-       Si todas las validaciones son correctas, se actualizan los datos de la finca en la base de datos.
-
-    **Respuestas**:
-    - **200**: Finca actualizada correctamente.
-    - **400**: Error en las validaciones de nombre, área o permisos de usuario.
-    - **500**: Error interno del servidor durante la actualización.
     """
-    # Verificar el token de sesión
     user = verify_session_token(session_token)
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
-
-    # Obtener el state "Activo" para la finca y la relación user_role_farm
-    active_farm_state = get_state(db, "Activo", "Farms")
-    active_urf_state = get_state(db, "Activo", "user_role_farm")
-
-    # Verificar si el usuario está asociado con la finca y si tanto la finca como la relación están activas
-    user_role_farm = db.query(UserRoleFarm).join(Farms).filter(
-        UserRoleFarm.farm_id == request.farm_id,
-        UserRoleFarm.user_id == user.user_id,
-        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
-        Farms.farm_state_id == active_farm_state.farm_state_id
-    ).first()
-
-    if not user_role_farm:
-        logger.warning("El usuario no está asociado con la finca activa que intenta editar")
-        return create_response("error", "No tienes permiso para editar esta finca porque no estás asociado con una finca activa")
-
-    # Verificar permisos para el rol del usuario
-    role_permission = db.query(RolePermission).join(Permissions).filter(
-        RolePermission.role_id == user_role_farm.role_id,
-        Permissions.name == "edit_farm"
-    ).first()
-
-    if not role_permission:
-        logger.warning("El rol del usuario no tiene permiso para editar la finca")
-        return create_response("error", "No tienes permiso para editar esta finca")
-
-    # Validaciones del nombre y área
-    if not request.name or not request.name.strip():
-        logger.warning("El nombre de la finca no puede estar vacío o solo contener espacios")
-        return create_response("error", "El nombre de la finca no puede estar vacío")
-    
-    if len(request.name) > 50:
-        logger.warning("El nombre de la finca es demasiado largo")
-        return create_response("error", "El nombre de la finca no puede tener más de 50 caracteres")
-    
-    if request.area <= 0:
-        logger.warning("El área de la finca debe ser mayor que cero")
-        return create_response("error", "El área de la finca debe ser un número positivo mayor que cero")
-
-    # Buscar la unidad de medida (areaUnit)
-    area_unit = db.query(AreaUnits).filter(AreaUnits.name == request.areaUnit).first()
-    if not area_unit:
-        logger.warning("Unidad de medida no válida: %s", request.areaUnit)
-        return create_response("error", "Unidad de medida no válida")
-
-    try:
-        # Buscar la finca que se está intentando actualizar
-        farm = db.query(Farms).filter(Farms.farm_id == request.farm_id).first()
-        if not farm:
-            logger.warning("Finca no encontrada")
-            return create_response("error", "Finca no encontrada")
-
-        # Verificar si el nuevo nombre ya está en uso por otra finca en la que el usuario es propietario
-        if farm.name != request.name:  # Solo validar el nombre si se está intentando cambiar
-            existing_farm = db.query(Farms).join(UserRoleFarm).join(Roles).filter(
-                Farms.name == request.name,
-                Farms.farm_id != request.farm_id,
-                UserRoleFarm.user_id == user.user_id,
-                Roles.name == "Propietario",  # Verificar que el usuario sea propietario
-                Farms.farm_state_id == active_farm_state.farm_state_id,
-                UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
-            ).first()
-
-            if existing_farm:
-                logger.warning("El nombre de la finca ya está en uso por otra finca del usuario")
-                return create_response("error", "El nombre de la finca ya está en uso por otra finca del propietario")
-
-        # Actualizar la finca
-        farm.name = request.name
-        farm.area = request.area
-        farm.area_unit_id = area_unit.area_unit_id
-
-        db.commit()
-        db.refresh(farm)
-        logger.info("Finca actualizada exitosamente con ID: %s", farm.farm_id)
-
-        return create_response("success", "Finca actualizada correctamente", {
-            "farm_id": farm.farm_id,
-            "name": farm.name,
-            "area": farm.area,
-            "area_unit": request.areaUnit
-        })
-    except Exception as e:
-        db.rollback()
-        logger.error("Error al actualizar la finca: %s", str(e))
-        raise HTTPException(status_code=500, detail=f"Error al actualizar la finca: {str(e)}")
-
-
+    return update_farm_use_case(request, user, db)
 
 @router.get("/get-farm/{farm_id}")
 def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
