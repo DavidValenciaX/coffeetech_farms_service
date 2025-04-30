@@ -106,3 +106,27 @@ def verify_session_token(session_token: str) -> Optional[Dict[str, Any]]:
     if response and response.get("status") == "success" and "user" in response.get("data", {}):
         return response["data"]["user"]
     return None
+
+def create_user_role(user_id: int, role_name: str) -> dict:
+    """
+    Creates a UserRole for the given user in the user service.
+
+    Args:
+        user_id (int): The user ID.
+        role_name (str): The role name to assign.
+
+    Returns:
+        dict: The response data from the user service.
+
+    Raises:
+        Exception: If the request fails or response is invalid.
+    """
+    response = _make_request(
+        "/roles/user-role",
+        method="POST",
+        data={"user_id": user_id, "role_name": role_name}
+    )
+    if response and "user_role_id" in response:
+        return response
+    else:
+        raise Exception(f"Error creating user_role for user {user_id} with role '{role_name}': {response}")

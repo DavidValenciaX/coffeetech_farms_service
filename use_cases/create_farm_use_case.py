@@ -5,7 +5,7 @@ from models.models import Farms, UserRoleFarm, AreaUnits
 from utils.response import create_response
 from utils.state import get_state
 import logging
-from adapters.user_client import get_user_role_ids
+from adapters.user_client import get_user_role_ids, create_user_role
 import os
 from dotenv import load_dotenv
 import requests
@@ -91,19 +91,8 @@ def create_farm_use_case(request, user, db: Session):
         logger.info("Finca creada exitosamente con ID: %s", new_farm.farm_id)
 
         # --- Crear UserRole en el servicio de usuarios ---
-        user_service_url = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
         try:
-            # Solicitud para crear UserRole (usuario-rol "Propietario")
-            response = requests.post(
-                f"{user_service_url}/roles/user-role",
-                json={"user_id": user.user_id, "role_name": "Propietario"},
-                timeout=10
-            )
-            if response.status_code != 201:
-                logger.error("No se pudo crear la relación UserRole en el servicio de usuarios: %s", response.text)
-                db.rollback()
-                return create_response("error", "No se pudo asignar el rol 'Propietario' al usuario", status_code=500)
-            user_role_data = response.json()
+            user_role_data = create_user_role(user.user_id, "Propietario")
             user_role_id = user_role_data.get("user_role_id")
             if not user_role_id:
                 logger.error("Respuesta inválida del servicio de usuarios al crear UserRole: %s", user_role_data)
