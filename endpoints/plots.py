@@ -79,7 +79,7 @@ def update_plot_location_endpoint(request: UpdatePlotLocationRequest, session_to
     return update_plot_location(request, user, db)
 
 # Endpoint para listar todos los lotes de una finca
-@router.get("/list-plots/{farm_id}", summary="Listar los lotes de una finca", tags=["Plots"])
+@router.get("/list-plots/{farm_id}", summary="Listar los lotes de una finca")
 def list_plots_endpoint(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
     """
     Obtiene una lista de todos los lotes activos de una finca específica.
@@ -100,7 +100,7 @@ def list_plots_endpoint(farm_id: int, session_token: str, db: Session = Depends(
     return list_plots(farm_id, user, db)
 
 # Endpoint para obtener la información de un lote específico
-@router.get("/get-plot/{plot_id}", summary="Obtener información de un lote", tags=["Plots"])
+@router.get("/get-plot/{plot_id}", summary="Obtener información de un lote")
 def get_plot_endpoint(plot_id: int, session_token: str, db: Session = Depends(get_db_session)):
     """
     Obtiene la información detallada de un lote específico.
@@ -123,7 +123,7 @@ def get_plot_endpoint(plot_id: int, session_token: str, db: Session = Depends(ge
     return get_plot(plot_id, user, db)
 
 # Endpoint para eliminar un lote (poner en estado 'Inactivo')
-@router.post("/delete-plot/{plot_id}", summary="Eliminar un lote (estado inactivo)", tags=["Plots"])
+@router.post("/delete-plot/{plot_id}", summary="Eliminar un lote (estado inactivo)")
 def delete_plot_endpoint(plot_id: int, session_token: str, db: Session = Depends(get_db_session)):
     """
     Elimina un lote (cambia su estado a 'Inactivo').

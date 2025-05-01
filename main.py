@@ -9,9 +9,6 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Incluir las rutas de utilidades (roles y unidades de medida)
-app.include_router(utils.router, prefix="/utils", tags=["Utilidades"])
-
 # Incluir las rutas de gestión de fincas
 app.include_router(farms.router, prefix="/farm", tags=["Fincas"])
 
@@ -19,9 +16,12 @@ app.include_router(farms.router, prefix="/farm", tags=["Fincas"])
 app.include_router(plots.router, prefix="/plots", tags=["Lotes"])
 
 # Incluir las rutas de colaboradores
-app.include_router(collaborators.router, prefix="/collaborators", tags=["Collaborators"])
+app.include_router(collaborators.router, prefix="/collaborators", tags=["Colaboradores"])
 
-@app.get("/")
+# Incluir las rutas de utilidades (roles y unidades de medida)
+app.include_router(utils.router, prefix="/utils", tags=["Utilidades"])
+
+@app.get("/", include_in_schema=False)
 def read_root():
     """
     Ruta raíz que retorna un mensaje de bienvenida.
