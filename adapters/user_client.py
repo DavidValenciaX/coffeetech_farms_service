@@ -176,3 +176,15 @@ def get_collaborators_info(user_role_ids: list) -> list:
         return response["collaborators"]
     else:
         raise Exception("No se pudo obtener la información de los colaboradores desde el microservicio de usuarios")
+
+def delete_user_role(user_role_id: int) -> None:
+    """
+    Elimina la relación usuario-rol en el microservicio de usuarios.
+    Lanza excepción si falla.
+    """
+    response = _make_request(
+        f"/roles/user-role/{user_role_id}/delete",
+        method="POST"
+    )
+    if not response or response.get("status") != "success":
+        raise Exception(f"No se pudo eliminar el user_role_id {user_role_id}: {response}")

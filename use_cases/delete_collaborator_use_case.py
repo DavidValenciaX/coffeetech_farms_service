@@ -1,9 +1,15 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from models.models import Farms, UserRoleFarm
 from utils.response import create_response
 from utils.state import get_state
 import logging
+from adapters.user_client import (
+    get_user_role_ids,
+    get_role_name_for_user_role,
+    get_role_permissions_for_user_role,
+    get_collaborators_info,
+    delete_user_role  # Debes crear este método en user_client y el endpoint en user_service
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +27,7 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
     logger.info(f"Finca encontrada: {farm.name} (ID: {farm.farm_id})")
 
     # Obtener el estado 'Activo' para 'user_role_farm'
-    urf_active_state = get_state(db, "Activo", "user_role_farm") # Use get_state
-
+    urf_active_state = get_state(db, "Activo", "user_role_farm")
     if not urf_active_state:
         logger.error("Estado 'Activo' no encontrado para 'user_role_farm'")
         return create_response(
@@ -31,56 +36,65 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
             status_code=400
         )
 
-    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_role_farm_state_id})") # Use correct ID field
+    # Obtener los user_role_ids del usuario autenticado
+    try:
+        user_role_ids = get_user_role_ids(user.user_id)
+    except Exception as e:
+        logger.error("No se pudieron obtener los user_role_ids: %s", str(e))
+        return create_response("error", "No se pudieron obtener los roles del usuario", status_code=500)
 
-    # Obtener la asociación UserRoleFarm del usuario con la finca
+    # Verificar si el usuario tiene un user_role_farm activo en la finca
     user_role_farm = db.query(UserRoleFarm).filter(
-        UserRoleFarm.user_id == user.user_id,
+        UserRoleFarm.user_role_id.in_(user_role_ids),
         UserRoleFarm.farm_id == farm_id,
         UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
-
     if not user_role_farm:
-        logger.warning(f"Usuario {user.name} no está asociado a la finca ID {farm_id}")
+        logger.warning(f"Usuario no está asociado a la finca ID {farm_id}")
         return create_response(
             "error",
             "No estás asociado a esta finca",
             status_code=403
         )
 
-    # Obtener el rol del usuario que realiza la acción
-    current_user_role = db.query(Roles).filter(Roles.role_id == user_role_farm.role_id).first()
-    if not current_user_role:
-        logger.error(f"Rol con ID {user_role_farm.role_id} no encontrado")
+    # Obtener el nombre del rol del usuario autenticado
+    current_user_role_name = get_role_name_for_user_role(user_role_farm.user_role_id)
+    if not current_user_role_name or current_user_role_name == "Unknown":
+        logger.error(f"Rol del usuario no encontrado para user_role_id {user_role_farm.user_role_id}")
         return create_response(
             "error",
             "Rol del usuario no encontrado",
             status_code=500
         )
 
-    logger.info(f"Rol del usuario: {current_user_role.name}")
+    logger.info(f"Rol del usuario: {current_user_role_name}")
 
-    # Obtener el colaborador a eliminar
-    collaborator = db.query(Users).filter(Users.user_id == delete_request.collaborator_user_id).first()
-    if not collaborator:
-        logger.error(f"Colaborador con ID {delete_request.collaborator_user_id} no encontrado")
+    # Obtener info del colaborador a eliminar usando get_collaborators_info
+    try:
+        collaborator_info_list = get_collaborators_info([delete_request.collaborator_user_role_id])
+        collaborator_info = collaborator_info_list[0] if collaborator_info_list else None
+    except Exception as e:
+        logger.error(f"Error al obtener info del colaborador: {str(e)}")
+        collaborator_info = None
+
+    if not collaborator_info:
+        logger.error(f"Colaborador con user_role_id {delete_request.collaborator_user_role_id} no encontrado")
         return create_response(
             "error",
             "Colaborador no encontrado",
             status_code=404
         )
 
-    logger.info(f"Colaborador a eliminar: {collaborator.name} (ID: {collaborator.user_id})")
+    logger.info(f"Colaborador a eliminar: {collaborator_info['user_name']} (user_role_id: {delete_request.collaborator_user_role_id})")
 
     # Verificar que el colaborador esté asociado activamente a la finca
     collaborator_role_farm = db.query(UserRoleFarm).filter(
-        UserRoleFarm.user_id == collaborator.user_id,
+        UserRoleFarm.user_role_id == delete_request.collaborator_user_role_id,
         UserRoleFarm.farm_id == farm_id,
         UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
-
     if not collaborator_role_farm:
-        logger.error(f"Colaborador {collaborator.name} no está asociado activamente a la finca ID {farm_id}")
+        logger.error(f"Colaborador no está asociado activamente a la finca ID {farm_id}")
         return create_response(
             "error",
             "El colaborador no está asociado activamente a esta finca",
@@ -88,74 +102,55 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
         )
 
     # Verificar que el usuario no esté intentando eliminar su propia asociación
-    if user.user_id == collaborator.user_id:
-        logger.warning(f"Usuario {user.name} intentó eliminar su propia asociación con la finca")
+    if user_role_farm.user_role_id == delete_request.collaborator_user_role_id:
+        logger.warning("Intento de eliminar su propia asociación con la finca")
         return create_response(
             "error",
             "No puedes eliminar tu propia asociación con la finca",
             status_code=403
         )
 
-    # Determinar el permiso requerido basado en el rol del colaborador
-    collaborator_role = db.query(Roles).filter(Roles.role_id == collaborator_role_farm.role_id).first()
-    if not collaborator_role:
-        logger.error(f"Rol con ID {collaborator_role_farm.role_id} no encontrado para el colaborador")
+    # Obtener el rol del colaborador
+    collaborator_role_name = get_role_name_for_user_role(delete_request.collaborator_user_role_id)
+    if not collaborator_role_name or collaborator_role_name == "Unknown":
+        logger.error(f"Rol del colaborador no encontrado para user_role_id {delete_request.collaborator_user_role_id}")
         return create_response(
             "error",
             "Rol del colaborador no encontrado",
             status_code=500
         )
 
-    logger.info(f"Rol del colaborador: {collaborator_role.name}")
+    logger.info(f"Rol del colaborador: {collaborator_role_name}")
 
-    if collaborator_role.name == "Administrador de finca":
+    # Determinar el permiso requerido basado en el rol del colaborador
+    if collaborator_role_name == "Administrador de finca":
         required_permission_name = "delete_administrator_farm"
-    elif collaborator_role.name == "Operador de campo":
+    elif collaborator_role_name == "Operador de campo":
         required_permission_name = "delete_operator_farm"
     else:
-        logger.error(f"Rol '{collaborator_role.name}' no reconocido para eliminación")
+        logger.error(f"Rol '{collaborator_role_name}' no reconocido para eliminación")
         return create_response(
             "error",
-            f"Rol '{collaborator_role.name}' no reconocido para eliminación",
+            f"Rol '{collaborator_role_name}' no reconocido para eliminación",
             status_code=400
         )
 
-    # Obtener el permiso requerido
-    required_permission = db.query(Permissions).filter(
-        func.lower(Permissions.name) == required_permission_name.lower()
-    ).first()
-
-    if not required_permission:
-        logger.error(f"Permiso '{required_permission_name}' no encontrado en la base de datos")
-        return create_response(
-            "error",
-            f"Permiso '{required_permission_name}' no encontrado en la base de datos",
-            status_code=500
-        )
-
-    logger.info(f"Permiso requerido para eliminar '{collaborator_role.name}': {required_permission.name}")
-
     # Verificar si el usuario tiene el permiso necesario
-    has_permission = db.query(RolePermission).filter(
-        RolePermission.role_id == user_role_farm.role_id,
-        RolePermission.permission_id == required_permission.permission_id
-    ).first()
-
-    if not has_permission:
-        logger.warning(f"Usuario {user.name} no tiene permiso '{required_permission.name}'")
+    permissions = get_role_permissions_for_user_role(user_role_farm.user_role_id)
+    if required_permission_name not in permissions:
+        logger.warning(f"Usuario no tiene permiso '{required_permission_name}'")
         return create_response(
             "error",
-            f"No tienes permiso para eliminar a un colaborador con rol '{collaborator_role.name}'",
+            f"No tienes permiso para eliminar a un colaborador con rol '{collaborator_role_name}'",
             status_code=403
         )
 
-    logger.info(f"Usuario {user.name} tiene permiso '{required_permission.name}'")
+    logger.info(f"Usuario tiene permiso '{required_permission_name}'")
 
-    # Eliminar la asociación del colaborador con la finca (Actualizar el estado a 'Inactivo')
+    # Eliminar la asociación del colaborador con la finca y en el microservicio de usuarios
     try:
-        # Obtener el estado 'Inactivo' para 'user_role_farm'
-        urf_inactive_state = get_state(db, "Inactivo", "user_role_farm") # Use get_state
-
+        # Cambiar el estado a 'Inactivo' en UserRoleFarm
+        urf_inactive_state = get_state(db, "Inactivo", "user_role_farm")
         if not urf_inactive_state:
             logger.error("Estado 'Inactivo' no encontrado para 'user_role_farm'")
             return create_response(
@@ -163,10 +158,11 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
                 "Estado 'Inactivo' no encontrado para 'user_role_farm'",
                 status_code=500
             )
-
         collaborator_role_farm.user_role_farm_state_id = urf_inactive_state.user_role_farm_state_id
         db.commit()
-        logger.info(f"Colaborador {collaborator.name} eliminado de la finca ID {farm_id} exitosamente")
+        # Eliminar la relación user_role en el microservicio de usuarios
+        delete_user_role(delete_request.collaborator_user_role_id)
+        logger.info(f"Colaborador eliminado de la finca y del microservicio de usuarios exitosamente")
     except Exception as e:
         db.rollback()
         logger.error(f"Error al eliminar el colaborador: {str(e)}")
@@ -179,6 +175,6 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
     # Devolver la respuesta exitosa
     return create_response(
         "success",
-        f"Colaborador '{collaborator.name}' eliminado exitosamente de la finca '{farm.name}'",
+        f"Colaborador '{collaborator_info['user_name']}' eliminado exitosamente de la finca '{farm.name}'",
         status_code=200
     )
