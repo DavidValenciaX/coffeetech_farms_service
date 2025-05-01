@@ -146,6 +146,18 @@ def get_role_permissions_for_user_role(user_role_id: int) -> list:
         return [perm["name"] for perm in response["permissions"]]
     return []
 
+def update_user_role(user_role_id: int, new_role_name: str) -> None:
+    """
+    Actualiza el nombre del rol asociado a un user_role_id en el microservicio de usuarios.
+    Lanza excepción si falla.
+    """
+    response = _make_request(
+        f"/roles/user-role/{user_role_id}/update-role",
+        method="POST",
+        data={"new_role_name": new_role_name}
+    )
+    if not response or response.get("status") != "success":
+        raise Exception(f"No se pudo actualizar el rol del user_role_id {user_role_id}: {response}")
 
 def get_collaborators_info(user_role_ids: list) -> list:
     """
