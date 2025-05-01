@@ -1,15 +1,19 @@
 from typing import Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from models.models import Farms, UserRoleFarm
 from utils.response import create_response
 from utils.state import get_state
 import logging
+from adapters.user_client import (
+    get_user_role_ids,
+    get_role_permissions_for_user_role,
+    get_role_name_for_user_role,
+    _make_request
+)
 
 logger = logging.getLogger(__name__)
 
 def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
-
     # Verificar que la finca exista
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
@@ -24,7 +28,6 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
 
     # Obtener el estado 'Activo' para 'user_role_farm'
     urf_active_state = get_state(db, "Activo", "user_role_farm")
-
     if not urf_active_state:
         logger.error("Estado 'Activo' no encontrado para 'user_role_farm'")
         return create_response(
@@ -33,60 +36,66 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
             status_code=400
         )
 
-    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_role_farm_state_id})")
+    # Obtener los user_role_ids del usuario desde el microservicio de usuarios
+    try:
+        user_role_ids = get_user_role_ids(user.user_id)
+    except Exception as e:
+        logger.error("No se pudieron obtener los user_role_ids: %s", str(e))
+        return create_response("error", "No se pudieron obtener los roles del usuario", status_code=500)
 
-    # Obtener el permiso 'read_collaborators' con insensibilidad a mayúsculas
-    read_permission = db.query(Permissions).filter(
-        func.lower(Permissions.name) == "read_collaborators"
-    ).first()
-
-    logger.info(f"Permiso 'read_collaborators' obtenido: {read_permission}")
-
-    if not read_permission:
-        logger.error("Permiso 'read_collaborators' no encontrado en la base de datos")
-        return create_response(
-            "error",
-            "Permiso 'read_collaborators' no encontrado en la base de datos",
-            status_code=500
-        )
-
-    # Verificar si el usuario tiene el permiso 'read_collaborators' en la finca especificada
-    has_permission = db.query(UserRoleFarm).join(RolePermission, UserRoleFarm.role_id == RolePermission.role_id).filter(
-        UserRoleFarm.user_id == user.user_id,
+    # Verificar si el usuario tiene un rol en la finca
+    user_role_farm = db.query(UserRoleFarm).filter(
+        UserRoleFarm.user_role_id.in_(user_role_ids),
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id,
-        RolePermission.permission_id == read_permission.permission_id
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
-
-    if not has_permission:
-        logger.warning(f"Usuario {user.name} no tiene permiso 'read_collaborators' en la finca ID {farm_id}")
+    if not user_role_farm:
+        logger.warning(f"El usuario no está asociado con la finca con ID {farm_id}")
         return create_response(
             "error",
-            "No tienes permiso para leer los colaboradores de esta finca",
+            "No tienes permiso para ver los colaboradores de esta finca",
             status_code=403
         )
 
-    logger.info(f"Usuario {user.name} tiene permiso 'read_collaborators' en la finca ID {farm_id}")
+    # Verificar permiso 'read_collaborators' usando el microservicio de usuarios
+    try:
+        permissions = get_role_permissions_for_user_role(user_role_farm.user_role_id)
+    except Exception as e:
+        logger.error("No se pudieron obtener los permisos del rol: %s", str(e))
+        return create_response("error", "No se pudieron obtener los permisos del rol", status_code=500)
 
-    # Obtener los colaboradores activos de la finca junto con su rol y user_id
-    collaborators_query = db.query(Users.user_id, Users.name, Users.email, Roles.name.label("role")).join(
-        UserRoleFarm, Users.user_id == UserRoleFarm.user_id
-    ).join(
-        Roles, UserRoleFarm.role_id == Roles.role_id
-    ).filter(
+    if "read_collaborators" not in permissions:
+        logger.warning("El rol del usuario no tiene permiso para ver los colaboradores en la finca")
+        return create_response(
+            "error",
+            "No tienes permiso para ver los colaboradores de esta finca",
+            status_code=403
+        )
+
+    # Obtener todos los user_role_farm activos de la finca
+    user_role_farms = db.query(UserRoleFarm).filter(
         UserRoleFarm.farm_id == farm_id,
         UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).all()
+    user_role_ids_farm = [urf.user_role_id for urf in user_role_farms]
 
-    logger.info(f"Colaboradores encontrados: {collaborators_query}")
+    # Consultar la información de los colaboradores al microservicio de usuarios
+    # Se asume que existe un endpoint que recibe una lista de user_role_ids y devuelve info de usuario y rol
+    response = _make_request(
+        "/roles/user-role/bulk-info",
+        method="POST",
+        data={"user_role_ids": user_role_ids_farm}
+    )
+    if not response or "collaborators" not in response:
+        logger.error("No se pudo obtener la información de los colaboradores desde el microservicio de usuarios")
+        return create_response(
+            "error",
+            "No se pudo obtener la información de los colaboradores",
+            status_code=500
+        )
 
-    # Convertir los resultados a una lista de dicts
-    collaborators_list = [
-        {"user_id": user_id, "name": name, "email": email, "role": role}
-        for user_id, name, email, role in collaborators_query
-    ]
+    collaborators_list = response["collaborators"]
 
-    # Devolver la respuesta con la lista de colaboradores
     return create_response(
         "success",
         "Colaboradores obtenidos exitosamente",
