@@ -9,6 +9,7 @@ from sqlalchemy import func
 from utils.state import get_state
 from adapters.user_client import verify_session_token
 import logging
+from use_cases.list_collaborators_use_case import list_collaborators
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +26,10 @@ class Collaborator(BaseModel):
         email (EmailStr): Correo electrónico del colaborador.
         role (str): Rol del colaborador.
     """
-    user_id: int          # Campo para el ID del usuario
+    user_id: int
     name: str
     email: EmailStr
-    role: str             # Campo para el rol
+    role: str
 
     class Config:
         from_attributes = True
@@ -46,8 +47,8 @@ class EditCollaboratorRoleRequest(BaseModel):
     new_role: str
 
     class Config:
-        populate_by_name = True  # Reemplaza 'allow_population_by_field_name = True'
-        from_attributes = True    # Reemplaza 'orm_mode = True'
+        populate_by_name = True
+        from_attributes = True
 
     def validate_input(self):
         """Valida que el nuevo rol sea válido."""
@@ -73,116 +74,18 @@ class DeleteCollaboratorRequest(BaseModel):
             raise ValueError("El `collaborator_user_id` debe ser un entero positivo.")
 
 @router.get("/list-collaborators", response_model=Dict[str, Any])
-def list_collaborators(
+def list_collaborators_endpoint(
     farm_id: int,
     session_token: str,
     db: Session = Depends(get_db_session)
 ):
     """
     Endpoint para listar los colaboradores de una finca específica.
-
-    Args:
-        farm_id (int): ID de la finca de la cual se listarán los colaboradores.
-        session_token (str): Token de sesión del usuario autenticado.
-        db (Session): Sesión de la base de datos.
-
-    Returns:
-        Dict[str, Any]: Respuesta con el estado de la operación y la lista de colaboradores.
     """
-
-    # 1. Verificar el session_token y obtener el usuario autenticado
-    user = verify_session_token(session_token)
-    if not user:
-        return session_token_invalid_response()
-
-    logger.info(f"Usuario autenticado: {user.name} (ID: {user.user_id})")
-
-    # 2. Verificar que la finca exista
-    farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
-    if not farm:
-        logger.error(f"Finca con ID {farm_id} no encontrada")
-        return create_response(
-            "error",
-            "Finca no encontrada",
-            status_code=404
-        )
-
-    logger.info(f"Finca encontrada: {farm.name} (ID: {farm.farm_id})")
-
-    # 3. Obtener el estado 'Activo' para 'user_role_farm'
-    urf_active_state = get_state(db, "Activo", "user_role_farm") # Use get_state
-
-    if not urf_active_state:
-        logger.error("Estado 'Activo' no encontrado para 'user_role_farm'")
-        return create_response(
-            "error",
-            "Estado 'Activo' no encontrado para 'user_role_farm'",
-            status_code=400
-        )
-
-    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_role_farm_state_id})") # Use correct ID field
-
-    # 4. Obtener el permiso 'read_collaborators' con insensibilidad a mayúsculas
-    read_permission = db.query(Permissions).filter(
-        func.lower(Permissions.name) == "read_collaborators"
-    ).first()
-
-    logger.info(f"Permiso 'read_collaborators' obtenido: {read_permission}")
-
-    if not read_permission:
-        logger.error("Permiso 'read_collaborators' no encontrado en la base de datos")
-        return create_response(
-            "error",
-            "Permiso 'read_collaborators' no encontrado en la base de datos",
-            status_code=500
-        )
-
-    # Verificar si el usuario tiene el permiso 'read_collaborators' en la finca especificada
-    has_permission = db.query(UserRoleFarm).join(RolePermission, UserRoleFarm.role_id == RolePermission.role_id).filter(
-        UserRoleFarm.user_id == user.user_id,
-        UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id,
-        RolePermission.permission_id == read_permission.permission_id
-    ).first()
-
-    if not has_permission:
-        logger.warning(f"Usuario {user.name} no tiene permiso 'read_collaborators' en la finca ID {farm_id}")
-        return create_response(
-            "error",
-            "No tienes permiso para leer los colaboradores de esta finca",
-            status_code=403
-        )
-
-    logger.info(f"Usuario {user.name} tiene permiso 'read_collaborators' en la finca ID {farm_id}")
-
-    # 6. Obtener los colaboradores activos de la finca junto con su rol y user_id
-    collaborators_query = db.query(Users.user_id, Users.name, Users.email, Roles.name.label("role")).join(
-        UserRoleFarm, Users.user_id == UserRoleFarm.user_id
-    ).join(
-        Roles, UserRoleFarm.role_id == Roles.role_id
-    ).filter(
-        UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
-    ).all()
-
-    logger.info(f"Colaboradores encontrados: {collaborators_query}")
-
-    # 7. Convertir los resultados a una lista de dicts
-    collaborators_list = [
-        {"user_id": user_id, "name": name, "email": email, "role": role}
-        for user_id, name, email, role in collaborators_query
-    ]
-
-    # 8. Devolver la respuesta con la lista de colaboradores
-    return create_response(
-        "success",
-        "Colaboradores obtenidos exitosamente",
-        data=collaborators_list,
-        status_code=200
-    )
+    return list_collaborators(farm_id=farm_id, session_token=session_token, db=db)
 
 @router.post("/edit-collaborator-role", response_model=Dict[str, Any])
-def edit_collaborator_role(
+def edit_collaborator_role_endpoint(
     edit_request: EditCollaboratorRoleRequest,
     farm_id: int,
     session_token: str,
@@ -457,7 +360,7 @@ def edit_collaborator_role(
 
 
 @router.post("/delete-collaborator", response_model=Dict[str, Any])
-def delete_collaborator(
+def delete_collaborator_endpoint(
     delete_request: DeleteCollaboratorRequest,
     farm_id: int,
     session_token: str,
