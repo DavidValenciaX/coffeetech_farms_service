@@ -8,7 +8,7 @@ from adapters.user_client import (
     get_user_role_ids,
     get_role_permissions_for_user_role,
     get_role_name_for_user_role,
-    _make_request
+    get_collaborators_info
 )
 
 logger = logging.getLogger(__name__)
@@ -79,22 +79,16 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
     ).all()
     user_role_ids_farm = [urf.user_role_id for urf in user_role_farms]
 
-    # Consultar la información de los colaboradores al microservicio de usuarios
-    # Se asume que existe un endpoint que recibe una lista de user_role_ids y devuelve info de usuario y rol
-    response = _make_request(
-        "/roles/user-role/bulk-info",
-        method="POST",
-        data={"user_role_ids": user_role_ids_farm}
-    )
-    if not response or "collaborators" not in response:
-        logger.error("No se pudo obtener la información de los colaboradores desde el microservicio de usuarios")
+    # Consultar la información de los colaboradores al microservicio de usuarios usando la función dedicada
+    try:
+        collaborators_list = get_collaborators_info(user_role_ids_farm)
+    except Exception as e:
+        logger.error("No se pudo obtener la información de los colaboradores desde el microservicio de usuarios: %s", str(e))
         return create_response(
             "error",
             "No se pudo obtener la información de los colaboradores",
             status_code=500
         )
-
-    collaborators_list = response["collaborators"]
 
     return create_response(
         "success",

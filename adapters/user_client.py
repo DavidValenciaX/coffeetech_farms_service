@@ -145,3 +145,22 @@ def get_role_permissions_for_user_role(user_role_id: int) -> list:
     if response and "permissions" in response:
         return [perm["name"] for perm in response["permissions"]]
     return []
+
+
+def get_collaborators_info(user_role_ids: list) -> list:
+    """
+    Obtiene la información de los colaboradores desde el microservicio de usuarios.
+    Args:
+        user_role_ids (list): Lista de IDs de user_role a consultar.
+    Returns:
+        list: Lista de colaboradores con su información, o lanza una excepción si falla.
+    """
+    response = _make_request(
+        "/roles/user-role/bulk-info",
+        method="POST",
+        data={"user_role_ids": user_role_ids}
+    )
+    if response and "collaborators" in response:
+        return response["collaborators"]
+    else:
+        raise Exception("No se pudo obtener la información de los colaboradores desde el microservicio de usuarios")
