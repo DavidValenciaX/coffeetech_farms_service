@@ -64,7 +64,7 @@ class UpdateFarmRequest(BaseModel):
     areaUnit: str
 
 @router.post("/create-farm")
-def create_farm(request: CreateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
+def create_farm_endpoint(request: CreateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
     """
     Crea una nueva finca y asigna al usuario como propietario.
 
@@ -86,7 +86,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
     return create_farm(request, user, db)
 
 @router.post("/list-farm")
-def list_farm(session_token: str, db: Session = Depends(get_db_session)):
+def list_farm_endpoint(session_token: str, db: Session = Depends(get_db_session)):
     """
     Endpoint para listar las fincas activas asociadas a un usuario autenticado mediante un token de sesión.
     """
@@ -97,7 +97,7 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
     return list_farms(user, db, ListFarmResponse)
 
 @router.post("/update-farm")
-def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
+def update_farm_endpoint(request: UpdateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
     """
     Endpoint para actualizar la información de una finca asociada a un usuario autenticado.
     """
@@ -108,7 +108,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
     return update_farm(request, user, db)
 
 @router.get("/get-farm/{farm_id}")
-def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
+def get_farm_endpoint(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
     """
     Obtiene los detalles de una finca específica en la que el usuario tiene permisos.
     
@@ -131,7 +131,7 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
     return get_farm(farm_id, user, db, ListFarmResponse)
 
 @router.post("/delete-farm/{farm_id}")
-def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
+def delete_farm_endpoint(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
     """
     Elimina (inactiva) una finca específica.
 

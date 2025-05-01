@@ -45,7 +45,7 @@ class UpdatePlotLocationRequest(BaseModel):
 
 # Endpoint para crear un lote
 @router.post("/create-plot")
-def create_plot(request: CreatePlotRequest, session_token: str, db: Session = Depends(get_db_session)):
+def create_plot_endpoint(request: CreatePlotRequest, session_token: str, db: Session = Depends(get_db_session)):
     """
     Crea un nuevo lote (plot) en una finca.
     """
@@ -57,7 +57,7 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
 
 # Endpoint para actualizar información general del lote
 @router.post("/update-plot-general-info", summary="Actualizar información general del lote", description="Actualiza el nombre y la variedad de café de un lote específico.")
-def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_token: str, db: Session = Depends(get_db_session)):
+def update_plot_general_info_endpoint(request: UpdatePlotGeneralInfoRequest, session_token: str, db: Session = Depends(get_db_session)):
     """
     Actualiza el nombre y la variedad de café de un lote específico.
     """
@@ -69,7 +69,7 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
 
 # Endpoint para actualizar la ubicación del lote
 @router.post("/update-plot-location", summary="Actualizar ubicación del lote", description="Actualiza las coordenadas geográficas (latitud, longitud, altitud) de un lote específico.")
-def update_plot_location(request: UpdatePlotLocationRequest, session_token: str, db: Session = Depends(get_db_session)):
+def update_plot_location_endpoint(request: UpdatePlotLocationRequest, session_token: str, db: Session = Depends(get_db_session)):
     """
     Actualiza las coordenadas geográficas (latitud, longitud, altitud) de un lote específico.
     """
@@ -81,7 +81,7 @@ def update_plot_location(request: UpdatePlotLocationRequest, session_token: str,
 
 # Endpoint para listar todos los lotes de una finca
 @router.get("/list-plots/{farm_id}", summary="Listar los lotes de una finca", tags=["Plots"])
-def list_plots(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
+def list_plots_endpoint(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
     """
     Obtiene una lista de todos los lotes activos de una finca específica.
 
@@ -102,7 +102,7 @@ def list_plots(farm_id: int, session_token: str, db: Session = Depends(get_db_se
 
 # Endpoint para obtener la información de un lote específico
 @router.get("/get-plot/{plot_id}", summary="Obtener información de un lote", tags=["Plots"])
-def get_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_session)):
+def get_plot_endpoint(plot_id: int, session_token: str, db: Session = Depends(get_db_session)):
     """
     Obtiene la información detallada de un lote específico.
 
@@ -125,7 +125,7 @@ def get_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_sess
 
 # Endpoint para eliminar un lote (poner en estado 'Inactivo')
 @router.post("/delete-plot/{plot_id}", summary="Eliminar un lote (estado inactivo)", tags=["Plots"])
-def delete_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_session)):
+def delete_plot_endpoint(plot_id: int, session_token: str, db: Session = Depends(get_db_session)):
     """
     Elimina un lote (cambia su estado a 'Inactivo').
 
