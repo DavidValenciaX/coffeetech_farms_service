@@ -1,10 +1,9 @@
 from typing import Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from models.models import Farms, UserRoleFarm, Users, Roles, Permissions, RolePermission
-from utils.response import create_response, session_token_invalid_response
+from models.models import Farms, UserRoleFarm
+from utils.response import create_response
 from utils.state import get_state
-from adapters.user_client import verify_session_token
 import logging
 
 logger = logging.getLogger(__name__)
