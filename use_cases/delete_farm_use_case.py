@@ -6,8 +6,9 @@ from utils.state import get_state
 import logging
 from adapters.user_client import get_user_role_ids, get_role_permissions_for_user_role
 
+logger = logging.getLogger(__name__)
+
 def delete_farm(farm_id: int, user, db: Session):
-    logger = logging.getLogger(__name__)
 
     # Obtener el state "Activo" para la finca y user_role_farm
     active_farm_state = get_state(db, "Activo", "Farms")

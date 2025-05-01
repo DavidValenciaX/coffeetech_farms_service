@@ -6,15 +6,10 @@ from utils.response import create_response
 from utils.state import get_state
 import logging
 from adapters.user_client import get_user_role_ids, create_user_role
-import os
-from dotenv import load_dotenv
-import requests
 
-# Load environment variables
-load_dotenv(override=True, encoding="utf-8")
+logger = logging.getLogger(__name__)
 
 def create_farm(request, user, db: Session):
-    logger = logging.getLogger(__name__)
     # Validación 1: El nombre de la finca no puede estar vacío ni contener solo espacios
     if not request.name or not request.name.strip():
         logger.warning("El nombre de la finca no puede estar vacío o solo contener espacios")

@@ -4,8 +4,9 @@ from utils.state import get_state
 from adapters.user_client import get_role_name_for_user_role, get_user_role_ids
 import logging
 
+logger = logging.getLogger(__name__)
+
 def get_farm(farm_id: int, user, db, ListFarmResponse):
-    logger = logging.getLogger(__name__)
     # Obtener el state "Activo" para la finca y user_role_farm
     active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:

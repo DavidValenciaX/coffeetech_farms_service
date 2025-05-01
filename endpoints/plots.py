@@ -1,12 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties
 from dataBase import get_db_session
 from adapters.user_client import verify_session_token
 from utils.response import session_token_invalid_response
 from utils.response import create_response
-from utils.state import get_state
 from use_cases.create_plot_use_case import create_plot
 from use_cases.update_plot_use_case import (
     update_plot_general_info,
