@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
 
-    # 2. Verificar que la finca exista
+    # Verificar que la finca exista
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
         logger.error(f"Finca con ID {farm_id} no encontrada")
@@ -22,7 +22,7 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
 
     logger.info(f"Finca encontrada: {farm.name} (ID: {farm.farm_id})")
 
-    # 3. Obtener el estado 'Activo' para 'user_role_farm'
+    # Obtener el estado 'Activo' para 'user_role_farm'
     urf_active_state = get_state(db, "Activo", "user_role_farm")
 
     if not urf_active_state:
@@ -35,7 +35,7 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
 
     logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_role_farm_state_id})")
 
-    # 4. Obtener el permiso 'read_collaborators' con insensibilidad a mayúsculas
+    # Obtener el permiso 'read_collaborators' con insensibilidad a mayúsculas
     read_permission = db.query(Permissions).filter(
         func.lower(Permissions.name) == "read_collaborators"
     ).first()
@@ -68,7 +68,7 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
 
     logger.info(f"Usuario {user.name} tiene permiso 'read_collaborators' en la finca ID {farm_id}")
 
-    # 6. Obtener los colaboradores activos de la finca junto con su rol y user_id
+    # Obtener los colaboradores activos de la finca junto con su rol y user_id
     collaborators_query = db.query(Users.user_id, Users.name, Users.email, Roles.name.label("role")).join(
         UserRoleFarm, Users.user_id == UserRoleFarm.user_id
     ).join(
@@ -80,13 +80,13 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
 
     logger.info(f"Colaboradores encontrados: {collaborators_query}")
 
-    # 7. Convertir los resultados a una lista de dicts
+    # Convertir los resultados a una lista de dicts
     collaborators_list = [
         {"user_id": user_id, "name": name, "email": email, "role": role}
         for user_id, name, email, role in collaborators_query
     ]
 
-    # 8. Devolver la respuesta con la lista de colaboradores
+    # Devolver la respuesta con la lista de colaboradores
     return create_response(
         "success",
         "Colaboradores obtenidos exitosamente",
