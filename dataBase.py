@@ -7,7 +7,23 @@ from sqlalchemy import create_engine, text
 
 load_dotenv(override=True, encoding='utf-8')
 
-DB_HOST = os.getenv("PGHOST")
+def running_in_docker():
+    # Detecta si está en Docker
+    path = "/.dockerenv"
+    if os.path.exists(path):
+        return True
+    try:
+        with open("/proc/1/cgroup", "rt") as f:
+            return "docker" in f.read()
+    except Exception:
+        return False
+
+# Selecciona el host según el entorno
+if running_in_docker():
+    DB_HOST = "host.docker.internal"
+else:
+    DB_HOST = os.getenv("PGHOST", "localhost")
+
 DB_PORT = os.getenv("PGPORT")
 DB_NAME = os.getenv("PGDATABASE")
 DB_USER = os.getenv("PGUSER")
