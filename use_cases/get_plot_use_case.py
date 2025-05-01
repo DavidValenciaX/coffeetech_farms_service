@@ -2,6 +2,7 @@ from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties
 from utils.response import create_response
 from utils.state import get_state
 import logging
+from adapters.user_client import get_user_role_ids, get_role_permissions_for_user_role
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,16 @@ def get_plot(plot_id: int, user, db):
         logger.warning("La finca asociada al lote no existe o no está activa")
         return create_response("error", "La finca asociada al lote no existe o no está activa")
 
+    # Obtener los user_role_ids del usuario desde el microservicio de usuarios
+    try:
+        user_role_ids = get_user_role_ids(user.user_id)
+    except Exception as e:
+        logger.error("No se pudieron obtener los user_role_ids: %s", str(e))
+        return create_response("error", "No se pudieron obtener los roles del usuario", status_code=500)
+
     # Verificar si el usuario tiene un rol en la finca
     user_role_farm = db.query(UserRoleFarm).filter(
-        UserRoleFarm.user_id == user.user_id,
+        UserRoleFarm.user_role_id.in_(user_role_ids),
         UserRoleFarm.farm_id == farm.farm_id,
         UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
     ).first()
@@ -39,12 +47,14 @@ def get_plot(plot_id: int, user, db):
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
         return create_response("error", "No tienes permiso para ver este lote")
 
-    # Verificar permiso 'read_plots'
-    role_permission = db.query(RolePermission).join(Permissions).filter(
-        RolePermission.role_id == user_role_farm.role_id,
-        Permissions.name == "read_plots"
-    ).first()
-    if not role_permission:
+    # Verificar permiso 'read_plots' usando el microservicio de usuarios
+    try:
+        permissions = get_role_permissions_for_user_role(user_role_farm.user_role_id)
+    except Exception as e:
+        logger.error("No se pudieron obtener los permisos del rol: %s", str(e))
+        return create_response("error", "No se pudieron obtener los permisos del rol", status_code=500)
+
+    if "read_plots" not in permissions:
         logger.warning("El rol del usuario no tiene permiso para ver los lotes en la finca")
         return create_response("error", "No tienes permiso para ver este lote")
 
