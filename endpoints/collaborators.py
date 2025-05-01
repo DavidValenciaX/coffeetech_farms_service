@@ -82,7 +82,12 @@ def list_collaborators_endpoint(
     """
     Endpoint para listar los colaboradores de una finca específica.
     """
-    return list_collaborators(farm_id=farm_id, session_token=session_token, db=db)
+    # 1. Verificar el session_token y obtener el usuario autenticado
+    user = verify_session_token(session_token)
+    if not user:
+        return session_token_invalid_response()
+    logger.info(f"Usuario autenticado: {user.name} (ID: {user.user_id})")
+    return list_collaborators(farm_id, user, db=db)
 
 @router.post("/edit-collaborator-role", response_model=Dict[str, Any])
 def edit_collaborator_role_endpoint(

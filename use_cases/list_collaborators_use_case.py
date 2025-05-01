@@ -9,13 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def list_collaborators(farm_id: int, session_token: str, db: Session) -> Dict[str, Any]:
-    # 1. Verificar el session_token y obtener el usuario autenticado
-    user = verify_session_token(session_token)
-    if not user:
-        return session_token_invalid_response()
-
-    logger.info(f"Usuario autenticado: {user.name} (ID: {user.user_id})")
+def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
 
     # 2. Verificar que la finca exista
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
