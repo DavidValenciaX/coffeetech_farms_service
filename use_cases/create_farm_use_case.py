@@ -13,7 +13,7 @@ import requests
 # Load environment variables
 load_dotenv(override=True, encoding="utf-8")
 
-def create_farm_use_case(request, user, db: Session):
+def create_farm(request, user, db: Session):
     logger = logging.getLogger(__name__)
     # Validación 1: El nombre de la finca no puede estar vacío ni contener solo espacios
     if not request.name or not request.name.strip():

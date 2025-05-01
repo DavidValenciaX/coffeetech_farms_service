@@ -7,7 +7,7 @@ from adapters.user_client import get_role_name_for_user_role, get_user_role_ids
 
 logger = logging.getLogger(__name__)
 
-def list_farms_use_case(user, db, ListFarmResponse):
+def list_farms(user, db, ListFarmResponse):
     # Obtener el state "Activo" para el tipo "Farms"
     active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:

@@ -4,12 +4,12 @@ from sqlalchemy.orm import Session
 from dataBase import get_db_session
 from utils.response import session_token_invalid_response
 from utils.response import create_response
-from use_cases.create_farm_use_case import create_farm_use_case
+from use_cases.create_farm_use_case import create_farm
 from adapters.user_client import verify_session_token
-from use_cases.list_farms_use_case import list_farms_use_case
-from use_cases.update_farm_use_case import update_farm_use_case
-from use_cases.get_farm_use_case import get_farm_use_case
-from use_cases.delete_farm_use_case import delete_farm_use_case
+from use_cases.list_farms_use_case import list_farms
+from use_cases.update_farm_use_case import update_farm
+from use_cases.get_farm_use_case import get_farm
+from use_cases.delete_farm_use_case import delete_farm
 import logging
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
-    return create_farm_use_case(request, user, db)
+    return create_farm(request, user, db)
 
 @router.post("/list-farm")
 def list_farm(session_token: str, db: Session = Depends(get_db_session)):
@@ -94,7 +94,7 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
-    return list_farms_use_case(user, db, ListFarmResponse)
+    return list_farms(user, db, ListFarmResponse)
 
 @router.post("/update-farm")
 def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
@@ -105,7 +105,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
-    return update_farm_use_case(request, user, db)
+    return update_farm(request, user, db)
 
 @router.get("/get-farm/{farm_id}")
 def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
@@ -128,7 +128,7 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
     if not user:
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
-    return get_farm_use_case(farm_id, user, db, ListFarmResponse)
+    return get_farm(farm_id, user, db, ListFarmResponse)
 
 @router.post("/delete-farm/{farm_id}")
 def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_session)):
@@ -156,4 +156,4 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return create_response("error", "Token de sesión inválido o usuario no encontrado")
     
-    return delete_farm_use_case(farm_id, user, db)
+    return delete_farm(farm_id, user, db)
