@@ -9,7 +9,7 @@ from adapters.user_client import (
     get_role_name_for_user_role,
     get_role_permissions_for_user_role,
     get_collaborators_info,
-    update_user_role  # Debes crear este método en user_client y el endpoint en user_service
+    update_user_role
 )
 
 logger = logging.getLogger(__name__)

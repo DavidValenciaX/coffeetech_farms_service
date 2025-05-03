@@ -154,18 +154,36 @@ def get_role_permissions_for_user_role(user_role_id: int) -> list:
         return [perm["name"] for perm in response["permissions"]]
     return []
 
-def update_user_role(user_role_id: int, new_role_name: str) -> None:
+def get_role_name_by_id(role_id: int) -> Optional[str]:
     """
-    Actualiza el nombre del rol asociado a un user_role_id en el microservicio de usuarios.
+    Gets the role name for a given role_id from the user service.
+
+    Args:
+        role_id (int): ID of the Role
+
+    Returns:
+        str: The name of the role, or None if not found or error occurs.
+    """
+    response = _make_request(f"/roles/roles/{role_id}/name")
+    if response and "role_name" in response:
+        return response["role_name"]
+    logger.error(f"Could not retrieve role name for role_id {role_id}")
+    return None
+
+def update_user_role(user_role_id: int, new_role_id: int) -> None:
+    """
+    Actualiza el rol asociado a un user_role_id en el microservicio de usuarios usando el ID del nuevo rol.
     Lanza excepción si falla.
     """
     response = _make_request(
         f"/roles/user-role/{user_role_id}/update-role",
         method="POST",
-        data={"new_role_name": new_role_name}
+        data={"new_role_id": new_role_id} # Changed from new_role_name
     )
     if not response or response.get("status") != "success":
-        raise Exception(f"No se pudo actualizar el rol del user_role_id {user_role_id}: {response}")
+        # Include response details in the exception message if available
+        error_detail = response.get("message", "Unknown error") if response else "No response"
+        raise Exception(f"No se pudo actualizar el rol del user_role_id {user_role_id} al role_id {new_role_id}: {error_detail}")
 
 def get_collaborators_info(user_role_ids: list) -> list:
     """

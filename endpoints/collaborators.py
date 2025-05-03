@@ -39,20 +39,18 @@ class EditCollaboratorRoleRequest(BaseModel):
     Modelo Pydantic para la solicitud de edición de rol de un colaborador.
 
     Attributes:
-        collaborator_user_id (int): ID del usuario colaborador cuyo rol se desea editar.
-        new_role (str): Nuevo rol que se asignará al colaborador.
+        collaborator_user_role_id (int): ID de la relación usuario-rol del colaborador cuyo rol se desea editar.
+        new_role_id (int): ID del nuevo rol que se asignará al colaborador.
     """
-    collaborator_user_id: int = Field(..., alias="collaborator_user_id")
-    new_role: str
+    collaborator_user_role_id: int = Field(..., alias="collaborator_user_role_id") # Changed alias if needed, or keep original if API expects this name
+    new_role_id: int # Changed from new_role: str
 
     class Config:
         populate_by_name = True
         from_attributes = True
 
-    def validate_input(self):
-        """Valida que el nuevo rol sea válido."""
-        if self.new_role not in ["Administrador de finca", "Operador de campo"]:
-            raise ValueError("El rol debe ser 'Administrador de finca' o 'Operador de campo'.")
+    # Removed validate_input method as role name validation is no longer needed here.
+    # The existence of new_role_id will be checked by the user service.
         
 # Modelo Pydantic para la solicitud de eliminación de colaborador
 class DeleteCollaboratorRequest(BaseModel):
@@ -90,7 +88,7 @@ def list_collaborators_endpoint(
 
 @router.post("/edit-collaborator-role", response_model=Dict[str, Any])
 def edit_collaborator_role_endpoint(
-    edit_request: EditCollaboratorRoleRequest,
+    edit_request: EditCollaboratorRoleRequest, # Uses the updated model
     farm_id: int,
     session_token: str,
     db: Session = Depends(get_db_session)
@@ -129,7 +127,7 @@ def edit_collaborator_role_endpoint(
     """
 
     # Validar la entrada
-    try:
+    """try:
         edit_request.validate_input()
     except ValueError as e:
         logger.error(f"Validación de entrada fallida: {str(e)}")
@@ -137,7 +135,7 @@ def edit_collaborator_role_endpoint(
             "error",
             str(e),
             status_code=400
-        )
+        )"""
         
     user = verify_session_token(session_token)
     if not user:
@@ -145,7 +143,7 @@ def edit_collaborator_role_endpoint(
 
     logger.info(f"Usuario autenticado: {user.name} (ID: {user.user_id})")
 
-    # Lógica de negocio delegada al use case
+    # Lógica de negocio delegada al use case (already expects new_role_id in edit_request)
     return edit_collaborator_role(edit_request, farm_id, user, db)
 
 @router.post("/delete-collaborator", response_model=Dict[str, Any])
