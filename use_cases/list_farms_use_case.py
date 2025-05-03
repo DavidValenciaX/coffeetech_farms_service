@@ -54,9 +54,12 @@ def list_farms(user, db, ListFarmResponse):
                 farm_id=farm.farm_id,
                 name=farm.name,
                 area=farm.area,
+                area_unit_id=farm.area_unit_id,  
                 area_unit=area_unit.name,
+                farm_state_id=farm.farm_state_id,  
                 farm_state=farm_state.name,
-                role=role_name
+                user_role_id=user_role_farm.user_role_id,  
+                role=role_name  
             ))
 
         return create_response("success", "Lista de fincas obtenida exitosamente", {"farms": farm_list})
