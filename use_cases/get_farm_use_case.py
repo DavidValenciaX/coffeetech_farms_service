@@ -60,8 +60,11 @@ def get_farm(farm_id: int, user, db, ListFarmResponse):
             name=farm.name,
             area=farm.area,
             area_unit=area_unit.name,
+            area_unit_id=farm.area_unit_id,
             farm_state=farm_state.name,
-            role=role_name
+            farm_state_id=farm.farm_state_id,
+            role=role_name,
+            user_role_id=user_role_farm.user_role_id
         )
 
         return create_response("success", "Finca obtenida exitosamente", {"farm": farm_response})
