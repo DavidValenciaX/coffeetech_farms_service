@@ -61,9 +61,9 @@ def create_farm(request, user, db: Session):
         return create_response("error", f"Ya existe una finca activa con el nombre '{request.name}' para el propietario")
 
     # Buscar la unidad de medida (areaUnit)
-    area_unit = db.query(AreaUnits).filter(AreaUnits.name == request.areaUnit).first()
+    area_unit = db.query(AreaUnits).filter(AreaUnits.area_unit_id == request.area_unit_id).first()
     if not area_unit:
-        logger.warning("Unidad de medida no válida: %s", request.areaUnit)
+        logger.warning("Unidad de medida no válida: %s", request.area_unit_id)
         return create_response("error", "Unidad de medida no válida")
 
     # Obtener el state "Activo" para el tipo "Farms" utilizando get_state
@@ -119,7 +119,7 @@ def create_farm(request, user, db: Session):
             "farm_id": new_farm.farm_id,
             "name": new_farm.name,
             "area": new_farm.area,
-            "area_unit": request.areaUnit
+            "area_unit": request.area_unit_id
         })
     except Exception as e:
         db.rollback()

@@ -56,9 +56,9 @@ def update_farm(request, user, db):
         return create_response("error", "El área de la finca debe ser un número positivo mayor que cero")
 
     # Buscar la unidad de medida (areaUnit)
-    area_unit = db.query(AreaUnits).filter(AreaUnits.name == request.areaUnit).first()
+    area_unit = db.query(AreaUnits).filter(AreaUnits.area_unit_id == request.area_unit_id).first()
     if not area_unit:
-        logger.warning("Unidad de medida no válida: %s", request.areaUnit)
+        logger.warning("Unidad de medida no válida: %s", request.area_unit_id)
         return create_response("error", "Unidad de medida no válida")
 
     try:
@@ -95,7 +95,7 @@ def update_farm(request, user, db):
             "farm_id": farm.farm_id,
             "name": farm.name,
             "area": farm.area,
-            "area_unit": request.areaUnit
+            "area_unit": request.area_unit_id
         })
     except Exception as e:
         db.rollback()

@@ -11,6 +11,7 @@ from use_cases.update_farm_use_case import update_farm
 from use_cases.get_farm_use_case import get_farm
 from use_cases.delete_farm_use_case import delete_farm
 import logging
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +23,12 @@ class CreateFarmRequest(BaseModel):
 
     **Atributos**:
     - **name**: Nombre de la finca (cadena de texto). Debe ser un valor no vacío ni contener solo espacios.
-    - **area**: Área de la finca (float). Debe ser un número positivo mayor que cero.
-    - **areaUnit**: Unidad de medida del área (cadena de texto). Debe ser una unidad de medida válida como 'hectáreas' o 'metros cuadrados'.
+    - **area**: Área de la finca (Decimal). Debe ser un número positivo mayor que cero.
+    - **area_unit_id**: ID de la unidad de medida del área (entero). Debe ser un ID válido existente en la tabla area_units.
     """
     name: str
-    area: float
-    areaUnit: str
+    area: Decimal
+    area_unit_id: int
     
 class ListFarmResponse(BaseModel):
     """
@@ -36,17 +37,23 @@ class ListFarmResponse(BaseModel):
     **Atributos**:
     - **farm_id**: ID único de la finca (entero).
     - **name**: Nombre de la finca (cadena de texto).
-    - **area**: Área de la finca (float), representada en la unidad de medida especificada.
-    - **area_unit**: Unidad de medida del área (cadena de texto).
-    - **farm_state**: Estado actual de la finca (cadena de texto), por ejemplo, 'Activo' o 'Inactivo'.
-    - **role**: Rol del usuario en relación a la finca (cadena de texto), como 'Propietario' o 'Administrador'.
+    - **area**: Área de la finca (Decimal), representada en la unidad de medida especificada.
+    - **area_unit_id**: ID de la unidad de medida del área (entero).
+    - **area_unit**: Nombre de la unidad de medida (cadena de texto).
+    - **farm_state_id**: ID del estado de la finca (entero).
+    - **farm_state**: Nombre del estado actual de la finca (cadena de texto), por ejemplo, 'Activo' o 'Inactivo'.
+    - **user_role_id**: ID del rol del usuario en relación a la finca (entero).
+    - **role**: Nombre del rol del usuario en relación a la finca (cadena de texto).
     """
     farm_id: int
     name: str
-    area: float
-    area_unit: str
-    farm_state: str
-    role: str
+    area: Decimal
+    area_unit_id: int
+    area_unit: str  # Nombre descriptivo de la unidad
+    farm_state_id: int
+    farm_state: str  # Nombre descriptivo del estado
+    user_role_id: int
+    role: str  # Nombre descriptivo del rol
     
 class UpdateFarmRequest(BaseModel):
     """
@@ -55,13 +62,13 @@ class UpdateFarmRequest(BaseModel):
     **Atributos**:
     - **farm_id**: ID de la finca a actualizar (entero). Debe existir una finca con este ID.
     - **name**: Nuevo nombre de la finca (cadena de texto). No puede estar vacío ni contener solo espacios.
-    - **area**: Nueva área de la finca (float). Debe ser un número positivo mayor que cero.
-    - **areaUnit**: Nueva unidad de medida del área (cadena de texto). Debe ser una unidad de medida válida como 'hectáreas' o 'metros cuadrados'.
+    - **area**: Nueva área de la finca (Decimal). Debe ser un número positivo mayor que cero.
+    - **area_unit_id**: ID de la unidad de medida del área (entero). Debe ser un ID válido existente en la tabla area_units.
     """
     farm_id: int
     name: str
-    area: float
-    areaUnit: str
+    area: Decimal
+    area_unit_id: int
 
 @router.post("/create-farm")
 def create_farm_endpoint(request: CreateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
