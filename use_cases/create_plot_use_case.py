@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from utils.response import create_response
 from utils.state import get_state
 from sqlalchemy.orm import Session
-from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties
+from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties, AreaUnits, AreaUnits
 import logging
 from adapters.user_client import get_user_role_ids, get_role_permissions_for_user_role
 
@@ -84,21 +84,23 @@ def create_plot(request, user, db: Session):
         return create_response("error", f"Ya existe un lote con el nombre '{request.name}' en esta finca")
 
     # Obtener la variedad de café
-    coffee_variety = db.query(CoffeeVarieties).filter(CoffeeVarieties.name == request.coffee_variety_name).first()
+    coffee_variety = db.query(CoffeeVarieties).filter(CoffeeVarieties.coffee_variety_id == request.coffee_variety_id).first()
     if not coffee_variety:
-        logger.warning("La variedad de café '%s' no existe", request.coffee_variety_name)
-        return create_response("error", f"La variedad de café '{request.coffee_variety_name}' no existe")
+        logger.warning("La variedad de café con ID '%s' no existe", request.coffee_variety_id)
+        return create_response("error", f"La variedad de café con ID '{request.coffee_variety_id}' no existe")
 
     # Crear el lote
     try:
         new_plot = Plots(
             name=request.name,
-            coffee_variety_id=coffee_variety.coffee_variety_id,
+            coffee_variety_id=request.coffee_variety_id,
             latitude=request.latitude,
             longitude=request.longitude,
             altitude=request.altitude,
             farm_id=request.farm_id,
-            plot_state_id=active_plot_state.plot_state_id
+            plot_state_id=active_plot_state.plot_state_id,
+            area=request.area,
+            area_unit_id=request.area_unit_id
         )
         db.add(new_plot)
         db.commit()
@@ -107,11 +109,13 @@ def create_plot(request, user, db: Session):
         return create_response("success", "Lote creado correctamente", {
             "plot_id": new_plot.plot_id,
             "name": new_plot.name,
-            "coffee_variety_name": coffee_variety.name,
-            "latitude": new_plot.latitude,
-            "longitude": new_plot.longitude,
-            "altitude": new_plot.altitude,
-            "farm_id": new_plot.farm_id
+            "coffee_variety_id": coffee_variety.coffee_variety_id,
+            "latitude": float(new_plot.latitude),
+            "longitude": float(new_plot.longitude),
+            "altitude": float(new_plot.altitude),
+            "farm_id": new_plot.farm_id,
+            "area": float(new_plot.area),
+            "area_unit_id": new_plot.area_unit_id
         })
     except Exception as e:
         db.rollback()

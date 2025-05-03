@@ -22,25 +22,29 @@ logger = logging.getLogger(__name__)
 # Modelos Pydantic para las solicitudes y respuestas
 class CreatePlotRequest(BaseModel):
     """Modelo para la solicitud de creación de un lote (plot)."""
-    name: str = Field(..., max_length=100, description="Nombre del lote. Máximo 100 caracteres.")
-    coffee_variety_name: str = Field(..., description="Nombre de la variedad de café.")
-    latitude: str = Field(..., description="Latitud del lote.")
-    longitude: str = Field(..., description="Longitud del lote.")
-    altitude: str = Field(..., description="Altitud del lote.")
+    name: str = Field(..., max_length=255, description="Nombre del lote. Máximo 255 caracteres.")
+    coffee_variety_id: int = Field(..., description="ID de la variedad de café.")  # Cambiado a ID
+    latitude: float = Field(..., ge=-90, le=90, description="Latitud del lote.")  # Numeric en modelo
+    longitude: float = Field(..., ge=-180, le=180, description="Longitud del lote.")  # Numeric en modelo
+    altitude: float = Field(..., ge=0, le=3000, description="Altitud del lote en metros.")  # Numeric en modelo
     farm_id: int = Field(..., description="ID de la finca a la que pertenece el lote.")
+    area: float = Field(..., gt=0, description="Área del lote.")  # Numeric en modelo
+    area_unit_id: int = Field(..., description="ID de la unidad de área del lote.")
 
 class UpdatePlotGeneralInfoRequest(BaseModel):
     """Modelo para la solicitud de actualización de información general de un lote."""
     plot_id: int = Field(..., description="ID del lote a actualizar.")
-    name: str = Field(..., max_length=100, description="Nuevo nombre del lote. Máximo 100 caracteres.")
-    coffee_variety_name: str = Field(..., description="Nombre de la nueva variedad de café.")
+    name: str = Field(..., max_length=255, description="Nuevo nombre del lote. Máximo 255 caracteres.")
+    coffee_variety_id: int = Field(..., description="ID de la nueva variedad de café.")  # Cambiado a ID
+    area: float = Field(..., gt=0, description="Área del lote.")  # Numeric en modelo
+    area_unit_id: int = Field(..., description="ID de la unidad de área del lote.")
 
 class UpdatePlotLocationRequest(BaseModel):
     """Modelo para la solicitud de actualización de la ubicación de un lote."""
     plot_id: int = Field(..., description="ID del lote a actualizar.")
-    latitude: str = Field(..., description="Nueva latitud del lote.")
-    longitude: str = Field(..., description="Nueva longitud del lote.")
-    altitude: str = Field(..., description="Nueva altitud del lote.")
+    latitude: float = Field(..., ge=-90, le=90, description="Nueva latitud del lote.")  # Numeric en modelo
+    longitude: float = Field(..., ge=-180, le=180, description="Nueva longitud del lote.")  # Numeric en modelo
+    altitude: float = Field(..., ge=0, le=3000, description="Nueva altitud del lote en metros.")  # Numeric en modelo
 
 # Endpoint para crear un lote
 @router.post("/create-plot")
