@@ -80,10 +80,11 @@ def update_plot_general_info(request, user, db):
         return create_response("error", f"Ya existe un lote con el nombre '{request.name}' en esta finca")
 
     # Obtener la variedad de café
-    coffee_variety = db.query(CoffeeVarieties).filter(CoffeeVarieties.name == request.coffee_variety_name).first()
+    coffee_variety = db.query(CoffeeVarieties).filter(CoffeeVarieties.coffee_variety_id == request.coffee_variety_id).first()
+
     if not coffee_variety:
-        logger.warning("La variedad de café '%s' no existe", request.coffee_variety_name)
-        return create_response("error", f"La variedad de café '{request.coffee_variety_name}' no existe")
+        logger.warning(f"La variedad de café con ID {request.coffee_variety_id} no existe")
+        return create_response("error", f"La variedad de café con ID {request.coffee_variety_id} no existe", status_code=400)
 
     # Actualizar el lote
     try:
