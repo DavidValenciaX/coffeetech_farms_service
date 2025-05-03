@@ -4,6 +4,8 @@ import httpx
 from dotenv import load_dotenv
 import os
 
+from pydantic import BaseModel
+
 # Load environment variables
 load_dotenv(override=True, encoding="utf-8")
 
@@ -11,6 +13,11 @@ logger = logging.getLogger(__name__)
 
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
 DEFAULT_TIMEOUT = 10.0
+
+class UserResponse(BaseModel):
+    user_id: int
+    name: str
+    email: str
 
 def _make_request(
     endpoint: str,
@@ -86,7 +93,7 @@ def get_user_role_ids(user_id: int) -> List[int]:
     else:
         raise Exception(f"Error retrieving user_role_ids for user {user_id}")
 
-def verify_session_token(session_token: str) -> Optional[Dict[str, Any]]:
+def verify_session_token(session_token: str) -> Optional[Union[Dict[str, Any], UserResponse]]:
     """
     Verifies a session token by making a request to the user service.
     Returns user data if the token is valid, None otherwise.
@@ -95,7 +102,7 @@ def verify_session_token(session_token: str) -> Optional[Dict[str, Any]]:
         session_token (str): Session token to verify
         
     Returns:
-        dict: User data if token is valid, None otherwise
+        UserResponse: User data object if token is valid, None otherwise
     """
     response = _make_request(
         "/session-token-verification", 
@@ -104,7 +111,8 @@ def verify_session_token(session_token: str) -> Optional[Dict[str, Any]]:
     )
     
     if response and response.get("status") == "success" and "user" in response.get("data", {}):
-        return response["data"]["user"]
+        # Convertir diccionario a objeto Pydantic
+        return UserResponse(**response["data"]["user"])
     return None
 
 def create_user_role(user_id: int, role_name: str) -> dict:
