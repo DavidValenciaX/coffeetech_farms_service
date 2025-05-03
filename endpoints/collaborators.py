@@ -58,17 +58,17 @@ class DeleteCollaboratorRequest(BaseModel):
     Modelo Pydantic para la solicitud de eliminación de un colaborador.
 
     Attributes:
-        collaborator_user_id (int): ID del usuario colaborador que se desea eliminar.
+        collaborator_user_role_id (int): ID de la relación usuario-rol del colaborador que se desea eliminar.
     """
-    collaborator_user_id: int = Field(..., alias="collaborator_user_id")
+    collaborator_user_role_id: int = Field(..., alias="collaborator_user_role_id")
 
     class Config:
         populate_by_name = True
         from_attributes = True
 
     def validate_input(self):
-        if self.collaborator_user_id <= 0:
-            raise ValueError("El `collaborator_user_id` debe ser un entero positivo.")
+        if self.collaborator_user_role_id <= 0:
+            raise ValueError("El `collaborator_user_role_id` debe ser un entero positivo.")
 
 @router.get("/list-collaborators", response_model=Dict[str, Any])
 def list_collaborators_endpoint(
