@@ -11,7 +11,6 @@ from use_cases.update_farm_use_case import update_farm
 from use_cases.get_farm_use_case import get_farm
 from use_cases.delete_farm_use_case import delete_farm
 import logging
-from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +22,11 @@ class CreateFarmRequest(BaseModel):
 
     **Atributos**:
     - **name**: Nombre de la finca (cadena de texto). Debe ser un valor no vacío ni contener solo espacios.
-    - **area**: Área de la finca (Decimal). Debe ser un número positivo mayor que cero.
+    - **area**: Área de la finca (float). Debe ser un número positivo mayor que cero.
     - **area_unit_id**: ID de la unidad de medida del área (entero). Debe ser un ID válido existente en la tabla area_units.
     """
     name: str
-    area: Decimal
+    area: float
     area_unit_id: int
     
 class ListFarmResponse(BaseModel):
@@ -37,7 +36,7 @@ class ListFarmResponse(BaseModel):
     **Atributos**:
     - **farm_id**: ID único de la finca (entero).
     - **name**: Nombre de la finca (cadena de texto).
-    - **area**: Área de la finca (Decimal), representada en la unidad de medida especificada.
+    - **area**: Área de la finca (float), representada en la unidad de medida especificada.
     - **area_unit_id**: ID de la unidad de medida del área (entero).
     - **area_unit**: Nombre de la unidad de medida (cadena de texto).
     - **farm_state_id**: ID del estado de la finca (entero).
@@ -47,7 +46,7 @@ class ListFarmResponse(BaseModel):
     """
     farm_id: int
     name: str
-    area: Decimal
+    area: float
     area_unit_id: int
     area_unit: str  # Nombre descriptivo de la unidad
     farm_state_id: int
@@ -62,12 +61,12 @@ class UpdateFarmRequest(BaseModel):
     **Atributos**:
     - **farm_id**: ID de la finca a actualizar (entero). Debe existir una finca con este ID.
     - **name**: Nuevo nombre de la finca (cadena de texto). No puede estar vacío ni contener solo espacios.
-    - **area**: Nueva área de la finca (Decimal). Debe ser un número positivo mayor que cero.
+    - **area**: Nueva área de la finca (float). Debe ser un número positivo mayor que cero.
     - **area_unit_id**: ID de la unidad de medida del área (entero). Debe ser un ID válido existente en la tabla area_units.
     """
     farm_id: int
     name: str
-    area: Decimal
+    area: float
     area_unit_id: int
 
 @router.post("/create-farm")
