@@ -123,16 +123,20 @@ def create_plot(request, user, db: Session):
         return create_response("error", f"La variedad de café con ID '{request.coffee_variety_id}' no existe")
 
     # Validar que el área del lote no sea mayor al área de la finca
-    is_valid_area, area_msg = validate_plot_area_not_greater_than_farm(
-        db,
-        request.area,
-        request.area_unit_id,
-        farm.area,
-        farm.area_unit_id
-    )
-    if not is_valid_area:
-        logger.error(area_msg)
-        return create_response("error", area_msg, status_code=400)
+    try:
+        is_valid_area, area_msg = validate_plot_area_not_greater_than_farm(
+            db,
+            request.area,
+            request.area_unit_id,
+            farm.area,
+            farm.area_unit_id
+        )
+        if not is_valid_area:
+            logger.error(area_msg)
+            return create_response("error", area_msg, status_code=400)
+    except ValueError as e:
+        logger.error("Error de validación: %s", str(e))
+        return create_response("error", str(e), status_code=400)
 
     # Crear el lote
     try:
