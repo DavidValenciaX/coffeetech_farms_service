@@ -58,29 +58,29 @@ def delete_farm(farm_id: int, user, db: Session):
             logger.warning("Finca no encontrada")
             return create_response("error", "Finca no encontrada")
 
-        # Cambiar el estado de la finca a "Inactiva"
-        inactive_farm_state = get_state(db, "Inactiva", "Farms")
+        # Cambiar el estado de la finca a "Inactivo"
+        inactive_farm_state = get_state(db, "Inactivo", "Farms")
 
         if not inactive_farm_state:
-            logger.error("No se encontró el estado 'Inactiva' para el tipo 'Farms'")
-            raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactiva' para el tipo 'Farms'.")
+            logger.error("No se encontró el estado 'Inactivo' para el tipo 'Farms'")
+            raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactivo' para el tipo 'Farms'.")
 
         farm.farm_state_id = inactive_farm_state.farm_state_id
 
-        # Cambiar el estado de todas las relaciones en user_role_farm a "Inactiva"
-        inactive_urf_state = get_state(db, "Inactiva", "user_role_farm")
+        # Cambiar el estado de todas las relaciones en user_role_farm a "Inactivo"
+        inactive_urf_state = get_state(db, "Inactivo", "user_role_farm")
 
         if not inactive_urf_state:
-            logger.error("No se encontró el estado 'Inactiva' para el tipo 'user_role_farm'")
-            raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactiva' para el tipo 'user_role_farm'.")
+            logger.error("No se encontró el estado 'Inactivo' para el tipo 'user_role_farm'")
+            raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactivo' para el tipo 'user_role_farm'.")
 
         user_role_farms = db.query(UserRoleFarm).filter(UserRoleFarm.farm_id == farm_id).all()
         for urf in user_role_farms:
             urf.user_role_farm_state_id = inactive_urf_state.user_role_farm_state_id
 
         db.commit()
-        logger.info("Finca y relaciones en user_role_farm puestas en estado 'Inactiva' para la finca con ID %s", farm_id)
-        return create_response("success", "Finca puesta en estado 'Inactiva' correctamente")
+        logger.info("Finca y relaciones en user_role_farm puestas en estado 'Inactivo' para la finca con ID %s", farm_id)
+        return create_response("success", "Finca puesta en estado 'Inactivo' correctamente")
 
     except Exception as e:
         db.rollback()
