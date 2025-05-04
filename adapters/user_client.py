@@ -69,7 +69,7 @@ def get_role_name_for_user_role(user_role_id: int) -> str:
     Returns:
         str: The name of the role, or "Unknown" if not found
     """
-    response = _make_request(f"/roles/user-role/{user_role_id}")
+    response = _make_request(f"/users-service/user-role/{user_role_id}")
     return response.get("role_name", "Unknown") if response else "Unknown"
 
 def get_user_role_ids(user_id: int) -> List[int]:
@@ -85,7 +85,7 @@ def get_user_role_ids(user_id: int) -> List[int]:
     Raises:
         Exception: If the request fails or response is invalid
     """
-    response = _make_request(f"/roles/user-role-ids/{user_id}")
+    response = _make_request(f"/users-service/user-role-ids/{user_id}")
     
     if response:
         return response.get("user_role_ids", [])
@@ -104,7 +104,7 @@ def verify_session_token(session_token: str) -> Optional[Union[Dict[str, Any], U
         UserResponse: User data object if token is valid, None otherwise
     """
     response = _make_request(
-        "/session-token-verification", 
+        "/users-service/session-token-verification", 
         method="POST", 
         data={"session_token": session_token}
     )
@@ -129,7 +129,7 @@ def create_user_role(user_id: int, role_name: str) -> dict:
         Exception: If the request fails or response is invalid.
     """
     response = _make_request(
-        "/roles/user-role",
+        "/users-service/user-role",
         method="POST",
         data={"user_id": user_id, "role_name": role_name}
     )
@@ -148,7 +148,7 @@ def get_role_permissions_for_user_role(user_role_id: int) -> list:
     Returns:
         list: List of permission names (str)
     """
-    response = _make_request(f"/roles/user-role/{user_role_id}/permissions")
+    response = _make_request(f"/users-service/user-role/{user_role_id}/permissions")
     if response and "permissions" in response:
         return [perm["name"] for perm in response["permissions"]]
     return []
@@ -163,7 +163,7 @@ def get_role_name_by_id(role_id: int) -> Optional[str]:
     Returns:
         str: The name of the role, or None if not found or error occurs.
     """
-    response = _make_request(f"/roles/roles/{role_id}/name")
+    response = _make_request(f"/users-service/{role_id}/name")
     if response and "role_name" in response:
         return response["role_name"]
     logger.error(f"Could not retrieve role name for role_id {role_id}")
@@ -175,7 +175,7 @@ def update_user_role(user_role_id: int, new_role_id: int) -> None:
     Lanza excepción si falla.
     """
     response = _make_request(
-        f"/roles/user-role/{user_role_id}/update-role",
+        f"/users-service/user-role/{user_role_id}/update-role",
         method="POST",
         data={"new_role_id": new_role_id} # Changed from new_role_name
     )
@@ -193,7 +193,7 @@ def get_collaborators_info(user_role_ids: list) -> list:
         list: Lista de colaboradores con su información, o lanza una excepción si falla.
     """
     response = _make_request(
-        "/roles/user-role/bulk-info",
+        "/users-service/user-role/bulk-info",
         method="POST",
         data={"user_role_ids": user_role_ids}
     )
@@ -208,7 +208,7 @@ def delete_user_role(user_role_id: int) -> None:
     Lanza excepción si falla.
     """
     response = _make_request(
-        f"/roles/user-role/{user_role_id}/delete",
+        f"/users-service/user-role/{user_role_id}/delete",
         method="POST"
     )
     if not response or response.get("status") != "success":
