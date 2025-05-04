@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from dataBase import get_db_session
 from utils.response import create_response
@@ -29,6 +29,11 @@ class UserRoleFarmResponse(BaseModel):
     farm_id: int
     user_role_farm_state_id: int
     user_role_farm_state: str
+
+class UserRoleFarmCreateRequest(BaseModel):
+    user_role_id: int
+    farm_id: int
+    user_role_farm_state_id: int
 
 @router.get("/get-farm/{farm_id}", response_model=FarmDetailResponse, include_in_schema=False)
 def get_farm_endpoint(farm_id: int, db: Session = Depends(get_db_session)):
@@ -82,3 +87,45 @@ def get_user_role_farm(user_id: int, farm_id:int, db: Session = Depends(get_db_s
         logger.error(f"Error getting user_role_farm for user_id {user_id}, farm_id {farm_id}: {str(e)}")
         # Raise HTTPException for internal errors to ensure proper FastAPI handling
         raise HTTPException(status_code=500, detail="Internal server error retrieving user role farm relationship")
+
+@router.get("/get-user-role-farm-state/{state_name}", include_in_schema=False)
+def get_user_role_farm_state_by_name(state_name: str, db: Session = Depends(get_db_session)):
+    """
+    Obtiene el estado de UserRoleFarm por nombre.
+    """
+    state = db.query(UserRoleFarmStates).filter(UserRoleFarmStates.name == state_name).first()
+    if not state:
+        return create_response("error", "Estado no encontrado", status_code=404)
+    return {
+        "user_role_farm_state_id": state.user_role_farm_state_id,
+        "name": state.name
+    }
+
+@router.post("/create-user-role-farm", status_code=status.HTTP_201_CREATED, include_in_schema=False)
+def create_user_role_farm_endpoint(data: UserRoleFarmCreateRequest, db: Session = Depends(get_db_session)):
+    """
+    Crea una relación UserRoleFarm para un usuario y una finca.
+    """
+    try:
+        # Verifica si ya existe la relación
+        existing = db.query(UserRoleFarm).filter(
+            UserRoleFarm.user_role_id == data.user_role_id,
+            UserRoleFarm.farm_id == data.farm_id
+        ).first()
+        if existing:
+            return create_response("error", "La relación user_role_farm ya existe", status_code=400)
+        new_urf = UserRoleFarm(
+            user_role_id=data.user_role_id,
+            farm_id=data.farm_id,
+            user_role_farm_state_id=data.user_role_farm_state_id
+        )
+        db.add(new_urf)
+        db.commit()
+        db.refresh(new_urf)
+        return {
+            "status": "success",
+            "user_role_farm_id": new_urf.user_role_farm_id
+        }
+    except Exception as e:
+        logger.error(f"Error creando user_role_farm: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creando user_role_farm")
