@@ -20,6 +20,9 @@ app.include_router(collaborators.router, prefix="/collaborators", tags=["Colabor
 # Incluir las rutas de utilidades (roles y unidades de medida)
 app.include_router(utils.router, prefix="/utils", tags=["Utilidades"])
 
+# Incluir las rutas de farms service para que se conecten los otros servicios
+app.include_router(farms.router, prefix="/farms-service", tags=["Farms Service"])
+
 @app.get("/", include_in_schema=False)
 def read_root():
     """
