@@ -1,13 +1,12 @@
 from fastapi import FastAPI
 from endpoints import farms, utils, collaborators, plots
-from dataBase import engine
-from models.models import Base
-import logging
+from utils.logger import setup_logger
+
+# Setup logging for the entire application
+logger = setup_logger()
+logger.info("Starting CoffeeTech Farms Service")
 
 app = FastAPI()
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Incluir las rutas de gestión de fincas
 app.include_router(farms.router, prefix="/farm", tags=["Fincas"])
@@ -29,4 +28,5 @@ def read_root():
     Returns:
         dict: Un diccionario con un mensaje de bienvenida.
     """
-    return {"message": "Welcome to the FastAPI application CoffeeTech!"}
+    logger.info("Root endpoint accessed")
+    return {"message": "Welcome to the FastAPI application CoffeeTech Farms Service!"}
