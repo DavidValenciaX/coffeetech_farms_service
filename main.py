@@ -21,7 +21,7 @@ app.include_router(collaborators.router, prefix="/collaborators", tags=["Colabor
 app.include_router(utils.router, prefix="/utils", tags=["Utilidades"])
 
 # Incluir las rutas de farms service para que se conecten los otros servicios
-app.include_router(farms.router, prefix="/farms-service", tags=["Farms Service"])
+app.include_router(farms.router, prefix="/farms-service", include_in_schema=False)
 
 @app.get("/", include_in_schema=False)
 def read_root():
