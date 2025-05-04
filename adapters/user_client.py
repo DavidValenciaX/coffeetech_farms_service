@@ -1,10 +1,9 @@
-import logging
 from typing import Optional, Any, Dict, List, Union
-import httpx
-from dotenv import load_dotenv
-import os
-
 from pydantic import BaseModel
+from dotenv import load_dotenv
+import httpx
+import logging
+import os
 
 # Load environment variables
 load_dotenv(override=True, encoding="utf-8")
