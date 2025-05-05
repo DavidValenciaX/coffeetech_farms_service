@@ -62,11 +62,6 @@ def get_plot(plot_id: int, user, db):
     coffee_variety = db.query(CoffeeVarieties).filter(
         CoffeeVarieties.coffee_variety_id == plot.coffee_variety_id
     ).first()
-    
-    # Obtener la unidad de área
-    area_unit = db.query(AreaUnits).filter(
-        AreaUnits.area_unit_id == plot.area_unit_id
-    ).first()
 
     # Devolver la información del lote
     plot_info = {
@@ -76,9 +71,7 @@ def get_plot(plot_id: int, user, db):
         "latitude": plot.latitude,
         "longitude": plot.longitude,
         "altitude": plot.altitude,
-        "farm_id": plot.farm_id,
-        "area": plot.area,
-        "area_unit": area_unit.abbreviation if area_unit else None
+        "farm_id": plot.farm_id
     }
 
     return create_response("success", "Lote obtenido exitosamente", {"plot": plot_info})

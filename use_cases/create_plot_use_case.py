@@ -2,44 +2,11 @@ from fastapi import HTTPException
 from utils.response import create_response
 from utils.state import get_state
 from sqlalchemy.orm import Session
-from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties, AreaUnits, AreaUnits
+from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties
 import logging
 from adapters.user_client import get_user_role_ids, get_role_permissions_for_user_role
 
 logger = logging.getLogger(__name__)
-
-def convert_area_to_m2(area: float, area_unit_name: str):
-    """
-    Convierte un área a metros cuadrados según la unidad.
-    """
-    conversions = {
-        "Metro cuadrado": 1,
-        "Hectárea": 10000,
-        "Kilómetro cuadrado": 1000000,
-    }
-    factor = conversions.get(area_unit_name)
-    if factor is None:
-        raise ValueError(f"Unidad de área no soportada para conversión: {area_unit_name}")
-    return float(area) * factor
-
-def validate_plot_area_not_greater_than_farm(db: Session, plot_area, plot_area_unit_id, farm_area, farm_area_unit_id):
-    """
-    Valida que el área del lote no sea mayor al área de la finca, convirtiendo ambas a metros cuadrados.
-    """
-    # Obtener nombres de las unidades
-    plot_unit = db.query(AreaUnits).filter(AreaUnits.area_unit_id == plot_area_unit_id).first()
-    farm_unit = db.query(AreaUnits).filter(AreaUnits.area_unit_id == farm_area_unit_id).first()
-    if not plot_unit or not farm_unit:
-        raise ValueError("No se pudo obtener la unidad de área para la validación.")
-
-    # Convertir ambas áreas a metros cuadrados
-    plot_area_m2 = convert_area_to_m2(plot_area, plot_unit.name)
-    farm_area_m2 = convert_area_to_m2(farm_area, farm_unit.name)
-
-    if plot_area_m2 > farm_area_m2:
-        logger.error("El área del lote (%.2f m2) es mayor que el área de la finca (%.2f m2)", plot_area_m2, farm_area_m2)
-        return False, f"El área del lote ({plot_area_m2:.2f} m2) no puede ser mayor que el área de la finca ({farm_area_m2:.2f} m2)"
-    return True, None
 
 def create_plot(request, user, db: Session):
     """
@@ -122,22 +89,6 @@ def create_plot(request, user, db: Session):
         logger.warning("La variedad de café con ID '%s' no existe", request.coffee_variety_id)
         return create_response("error", f"La variedad de café con ID '{request.coffee_variety_id}' no existe")
 
-    # Validar que el área del lote no sea mayor al área de la finca
-    try:
-        is_valid_area, area_msg = validate_plot_area_not_greater_than_farm(
-            db,
-            request.area,
-            request.area_unit_id,
-            farm.area,
-            farm.area_unit_id
-        )
-        if not is_valid_area:
-            logger.error(area_msg)
-            return create_response("error", area_msg, status_code=400)
-    except ValueError as e:
-        logger.error("Error de validación: %s", str(e))
-        return create_response("error", str(e), status_code=400)
-
     # Crear el lote
     try:
         new_plot = Plots(
@@ -147,9 +98,7 @@ def create_plot(request, user, db: Session):
             longitude=request.longitude,
             altitude=request.altitude,
             farm_id=request.farm_id,
-            plot_state_id=active_plot_state.plot_state_id,
-            area=request.area,
-            area_unit_id=request.area_unit_id
+            plot_state_id=active_plot_state.plot_state_id
         )
         db.add(new_plot)
         db.commit()
@@ -159,12 +108,10 @@ def create_plot(request, user, db: Session):
             "plot_id": new_plot.plot_id,
             "name": new_plot.name,
             "coffee_variety_id": coffee_variety.coffee_variety_id,
-            "latitude": float(new_plot.latitude),
-            "longitude": float(new_plot.longitude),
-            "altitude": float(new_plot.altitude),
-            "farm_id": new_plot.farm_id,
-            "area": float(new_plot.area),
-            "area_unit_id": new_plot.area_unit_id
+            "latitude": float(new_plot.latitude) if new_plot.latitude else None,
+            "longitude": float(new_plot.longitude) if new_plot.longitude else None,
+            "altitude": float(new_plot.altitude) if new_plot.altitude else None,
+            "farm_id": new_plot.farm_id
         })
     except Exception as e:
         db.rollback()

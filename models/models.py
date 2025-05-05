@@ -36,7 +36,6 @@ class Plots(Base):
     __tablename__ = 'plots'
     __table_args__ = (
         UniqueConstraint('name', 'farm_id'),
-        CheckConstraint('area > 0'),
         CheckConstraint('longitude BETWEEN -180 AND 180'),
         CheckConstraint('latitude BETWEEN -90 AND 90'),
         CheckConstraint('altitude >= 0 AND altitude <= 3000'),
@@ -49,15 +48,12 @@ class Plots(Base):
     altitude = Column(Numeric(10, 2), nullable=True)
     coffee_variety_id = Column(Integer, ForeignKey('coffee_varieties.coffee_variety_id'), nullable=False)
     farm_id = Column(Integer, ForeignKey('farms.farm_id', ondelete='CASCADE'), nullable=False)
-    area = Column(Numeric(10, 2), nullable=False)
-    area_unit_id = Column(Integer, ForeignKey('area_units.area_unit_id'), nullable=False)
     plot_state_id = Column(Integer, ForeignKey('plot_states.plot_state_id'), nullable=False)
 
     # Relaciones
     farm = relationship("Farms", back_populates="plots")
     coffee_variety = relationship("CoffeeVarieties", back_populates="plots")
     state = relationship("PlotStates", back_populates="plots")
-    area_unit = relationship("AreaUnits", back_populates="plots")
 
 class CoffeeVarieties(Base):
     __tablename__ = 'coffee_varieties'

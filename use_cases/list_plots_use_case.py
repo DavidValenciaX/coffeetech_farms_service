@@ -63,20 +63,13 @@ def list_plots(farm_id: int, user, db):
                 CoffeeVarieties.coffee_variety_id == plot.coffee_variety_id
             ).first()
             
-            # Get the area unit
-            area_unit = db.query(AreaUnits).filter(
-                AreaUnits.area_unit_id == plot.area_unit_id
-            ).first()
-            
             plot_list.append({
                 "plot_id": plot.plot_id,
                 "name": plot.name,
                 "coffee_variety_name": coffee_variety.name if coffee_variety else None,
                 "latitude": plot.latitude,
                 "longitude": plot.longitude,
-                "altitude": plot.altitude,
-                "area": plot.area,
-                "area_unit": area_unit.abbreviation if area_unit else None
+                "altitude": plot.altitude
             })
 
         return create_response("success", "Lista de lotes obtenida exitosamente", {"plots": plot_list})
