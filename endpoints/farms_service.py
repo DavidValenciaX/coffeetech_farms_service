@@ -40,6 +40,7 @@ def get_farm_endpoint(farm_id: int, db: Session = Depends(get_db_session)):
     """
     Obtiene una finca por su ID y retorna la información básica.
     """
+    logger.info(f"Received request for /get-farm/{farm_id}")
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
         return create_response("error", "Finca no encontrada", status_code=404)
