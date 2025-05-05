@@ -73,7 +73,6 @@ class AreaUnits(Base):
 
     # Relaciones
     farms = relationship("Farms", back_populates="area_unit")
-    plots = relationship("Plots", back_populates="area_unit")
 
 class UserRoleFarmStates(Base):
     __tablename__ = 'user_role_farm_states'
