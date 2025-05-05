@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  farms-service:
+    build: .
+    container_name: coffeetech-farms-service
+    ports:
+      - "8002:8000"
+    env_file: .env
+    networks:
+      - common
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  common:
+    external: true
+    name: coffeetech_network
