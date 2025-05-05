@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from endpoints import farms, utils, collaborators, plots
+from endpoints import farms, utils, collaborators, plots, farms_service
 from utils.logger import setup_logger
 
 # Setup logging for the entire application
@@ -21,7 +21,7 @@ app.include_router(collaborators.router, prefix="/collaborators", tags=["Colabor
 app.include_router(utils.router, prefix="/utils", tags=["Utilidades"])
 
 # Incluir las rutas de farms service para que se conecten los otros servicios
-app.include_router(farms.router, prefix="/farms-service", include_in_schema=False)
+app.include_router(farms_service.router, prefix="/farms-service", include_in_schema=False)
 
 @app.get("/", include_in_schema=False)
 def read_root():
