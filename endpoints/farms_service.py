@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from dataBase import get_db_session
 from utils.response import create_response
 from pydantic import BaseModel
-from models.models import Farms, UserRoleFarm, UserRoleFarmStates
+from models.models import Farms, PlotStates, Plots, UserRoleFarm, UserRoleFarmStates
 from adapters.user_client import get_user_role_ids
 import logging
 
@@ -130,3 +130,41 @@ def create_user_role_farm_endpoint(data: UserRoleFarmCreateRequest, db: Session 
     except Exception as e:
         logger.error(f"Error creando user_role_farm: {str(e)}")
         raise HTTPException(status_code=500, detail="Error creando user_role_farm")
+    
+@router.get("/verify-plot/{plot_id}", include_in_schema=False)
+def verify_plot_endpoint(plot_id: int, db: Session = Depends(get_db_session)):
+    """
+    Verifica si un lote existe y está activo.
+    
+    Args:
+        plot_id: ID del lote a verificar
+        
+    Returns:
+        Información del lote si existe y está activo, error en caso contrario
+    """
+    logger.info(f"Verificando lote con ID {plot_id}")
+    
+    # Buscar el estado activo para plots
+    active_plot_state = db.query(PlotStates).filter(PlotStates.name == "Activo").first()
+    if not active_plot_state:
+        logger.error("Estado 'Activo' para Plots no encontrado")
+        return create_response("error", "Estado 'Activo' para Plots no encontrado", status_code=500)
+    
+    # Buscar el lote que coincida con el ID y esté activo
+    plot = db.query(Plots).filter(
+        Plots.plot_id == plot_id,
+        Plots.plot_state_id == active_plot_state.plot_state_id
+    ).first()
+    
+    if not plot:
+        logger.warning(f"El lote con ID {plot_id} no existe o no está activo")
+        return create_response("error", "El lote especificado no existe o no está activo", status_code=404)
+    
+    # Si se encontró el lote y está activo, devolver su información
+    return {
+        "plot_id": plot.plot_id,
+        "name": plot.name,
+        "farm_id": plot.farm_id,
+        "plot_state_id": plot.plot_state_id,
+        "plot_state": active_plot_state.name
+    }
