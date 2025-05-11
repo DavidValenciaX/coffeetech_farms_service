@@ -2,38 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from dataBase import get_db_session
 from utils.response import create_response
-from pydantic import BaseModel
 from models.models import Farms, PlotStates, Plots, UserRoleFarm, UserRoleFarmStates
 from adapters.user_client import get_user_role_ids
 import logging
+from domain.schemas import FarmDetailResponse, UserRoleFarmResponse, UserRoleFarmCreateRequest
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
-
-class FarmDetailResponse(BaseModel):
-    """
-    Modelo de datos para la respuesta al obtener detalles de una finca.
-    """
-    farm_id: int
-    name: str
-    area: float
-    area_unit_id: int
-    area_unit: str
-    farm_state_id: int
-    farm_state: str
-
-class UserRoleFarmResponse(BaseModel):
-    user_role_farm_id: int
-    user_role_id: int
-    farm_id: int
-    user_role_farm_state_id: int
-    user_role_farm_state: str
-
-class UserRoleFarmCreateRequest(BaseModel):
-    user_role_id: int
-    farm_id: int
-    user_role_farm_state_id: int
 
 @router.get("/get-farm/{farm_id}", response_model=FarmDetailResponse, include_in_schema=False)
 def get_farm_endpoint(farm_id: int, db: Session = Depends(get_db_session)):

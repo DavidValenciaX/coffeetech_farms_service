@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Dict, Any
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import EmailStr
 from dataBase import get_db_session
 from utils.response import create_response, session_token_invalid_response
 from adapters.user_client import verify_session_token
@@ -9,63 +9,14 @@ import logging
 from use_cases.list_collaborators_use_case import list_collaborators
 from use_cases.edit_collaborator_role_use_case import edit_collaborator_role
 from use_cases.delete_collaborator_use_case import delete_collaborator
+from domain.schemas import (
+    EditCollaboratorRoleRequest,
+    DeleteCollaboratorRequest,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Modelo Pydantic actualizado para la respuesta de colaborador
-class Collaborator(BaseModel):
-    """
-    Modelo Pydantic para representar un colaborador.
-
-    Attributes:
-        user_id (int): ID del usuario del colaborador.
-        name (str): Nombre del colaborador.
-        email (EmailStr): Correo electrónico del colaborador.
-        role (str): Rol del colaborador.
-    """
-    user_id: int
-    name: str
-    email: EmailStr
-    role: str
-
-    class Config:
-        from_attributes = True
-        
-# Modelo Pydantic para la solicitud de edición de rol
-class EditCollaboratorRoleRequest(BaseModel):
-    """
-    Modelo Pydantic para la solicitud de edición de rol de un colaborador.
-
-    Attributes:
-        collaborator_id (int): ID del usuario colaborador cuyo rol se desea editar.
-        new_role_id (int): ID del nuevo rol que se asignará al colaborador.
-    """
-    collaborator_id: int
-    new_role_id: int
-
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-        
-# Modelo Pydantic para la solicitud de eliminación de colaborador
-class DeleteCollaboratorRequest(BaseModel):
-    """
-    Modelo Pydantic para la solicitud de eliminación de un colaborador.
-
-    Attributes:
-        collaborator_user_role_id (int): ID de la relación usuario-rol del colaborador que se desea eliminar.
-    """
-    collaborator_user_role_id: int = Field(..., alias="collaborator_user_role_id")
-
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
-    def validate_input(self):
-        if self.collaborator_user_role_id <= 0:
-            raise ValueError("El `collaborator_user_role_id` debe ser un entero positivo.")
 
 @router.get("/list-collaborators", response_model=Dict[str, Any])
 def list_collaborators_endpoint(

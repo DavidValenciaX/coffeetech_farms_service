@@ -1,6 +1,6 @@
 from typing import Optional, Any, Dict, List, Union
 from fastapi import Depends
-from pydantic import BaseModel
+from domain.schemas import UserResponse
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from models.models import UserRoleFarm
@@ -17,11 +17,6 @@ logger = logging.getLogger(__name__)
 
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
 DEFAULT_TIMEOUT = 10.0
-
-class UserResponse(BaseModel):
-    user_id: int
-    name: str
-    email: str
 
 def _make_request(
     endpoint: str,

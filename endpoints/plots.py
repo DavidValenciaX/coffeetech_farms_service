@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from dataBase import get_db_session
 from adapters.user_client import verify_session_token
@@ -14,33 +13,15 @@ from use_cases.list_plots_use_case import list_plots
 from use_cases.get_plot_use_case import get_plot
 from use_cases.delete_plot_use_case import delete_plot
 import logging
+from domain.schemas import (
+    CreatePlotRequest,
+    UpdatePlotGeneralInfoRequest,
+    UpdatePlotLocationRequest,
+)
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
-
-# Modelos Pydantic para las solicitudes y respuestas
-class CreatePlotRequest(BaseModel):
-    """Modelo para la solicitud de creación de un lote (plot)."""
-    name: str = Field(..., max_length=255, description="Nombre del lote. Máximo 255 caracteres.")
-    coffee_variety_id: int = Field(..., description="ID de la variedad de café.")
-    latitude: float = Field(..., ge=-90, le=90, description="Latitud del lote.")
-    longitude: float = Field(..., ge=-180, le=180, description="Longitud del lote.")
-    altitude: float = Field(..., ge=0, le=3000, description="Altitud del lote en metros.")
-    farm_id: int = Field(..., description="ID de la finca a la que pertenece el lote.")
-
-class UpdatePlotGeneralInfoRequest(BaseModel):
-    """Modelo para la solicitud de actualización de información general de un lote."""
-    plot_id: int = Field(..., description="ID del lote a actualizar.")
-    name: str = Field(..., max_length=255, description="Nuevo nombre del lote. Máximo 255 caracteres.")
-    coffee_variety_id: int = Field(..., description="ID de la nueva variedad de café.")
-
-class UpdatePlotLocationRequest(BaseModel):
-    """Modelo para la solicitud de actualización de la ubicación de un lote."""
-    plot_id: int = Field(..., description="ID del lote a actualizar.")
-    latitude: float = Field(..., ge=-90, le=90, description="Nueva latitud del lote.")
-    longitude: float = Field(..., ge=-180, le=180, description="Nueva longitud del lote.")
-    altitude: float = Field(..., ge=0, le=3000, description="Nueva altitud del lote en metros.")
 
 # Endpoint para crear un lote
 @router.post("/create-plot")
