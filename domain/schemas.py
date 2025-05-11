@@ -55,15 +55,15 @@ class EditCollaboratorRoleRequest(BaseModel):
         from_attributes = True
 
 class DeleteCollaboratorRequest(BaseModel):
-    collaborator_user_role_id: int = Field(..., alias="collaborator_user_role_id")
+    collaborator_id: int = Field(..., alias="collaborator_id")
 
     class Config:
         populate_by_name = True
         from_attributes = True
 
     def validate_input(self):
-        if self.collaborator_user_role_id <= 0:
-            raise ValueError("El `collaborator_user_role_id` debe ser un entero positivo.")
+        if self.collaborator_id <= 0:
+            raise ValueError("El `collaborator_id` debe ser un entero positivo.")
 
 # --- Farms Service (internal) ---
 class FarmDetailResponse(BaseModel):

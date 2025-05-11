@@ -7,7 +7,6 @@ import logging
 from adapters.user_client import (
     get_user_role_ids,
     get_role_permissions_for_user_role,
-    get_role_name_for_user_role,
     get_collaborators_info
 )
 

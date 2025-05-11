@@ -8,7 +8,8 @@ from adapters.user_client import (
     get_role_name_for_user_role,
     get_role_permissions_for_user_role,
     get_collaborators_info,
-    delete_user_role  # Debes crear este método en user_client y el endpoint en user_service
+    delete_user_role,
+    get_user_role_id_for_farm
 )
 
 logger = logging.getLogger(__name__)
@@ -69,27 +70,37 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
 
     logger.info(f"Rol del usuario: {current_user_role_name}")
 
+    # Obtener el user_role_id del colaborador en esta finca
+    collaborator_user_role_id = get_user_role_id_for_farm(delete_request.collaborator_id, farm_id, db)
+    if not collaborator_user_role_id:
+        logger.error(f"No se encontró el rol del colaborador con ID {delete_request.collaborator_id} en la finca {farm_id}")
+        return create_response(
+            "error",
+            "Colaborador no encontrado en esta finca",
+            status_code=404
+        )
+
     # Obtener info del colaborador a eliminar usando get_collaborators_info
     try:
-        collaborator_info_list = get_collaborators_info([delete_request.collaborator_user_role_id])
+        collaborator_info_list = get_collaborators_info([collaborator_user_role_id])
         collaborator_info = collaborator_info_list[0] if collaborator_info_list else None
     except Exception as e:
         logger.error(f"Error al obtener info del colaborador: {str(e)}")
         collaborator_info = None
 
     if not collaborator_info:
-        logger.error(f"Colaborador con user_role_id {delete_request.collaborator_user_role_id} no encontrado")
+        logger.error(f"Colaborador con user_role_id {collaborator_user_role_id} no encontrado")
         return create_response(
             "error",
             "Colaborador no encontrado",
             status_code=404
         )
 
-    logger.info(f"Colaborador a eliminar: {collaborator_info['user_name']} (user_role_id: {delete_request.collaborator_user_role_id})")
+    logger.info(f"Colaborador a eliminar: {collaborator_info['user_name']} (user_role_id: {collaborator_user_role_id})")
 
     # Verificar que el colaborador esté asociado activamente a la finca
     collaborator_role_farm = db.query(UserRoleFarm).filter(
-        UserRoleFarm.user_role_id == delete_request.collaborator_user_role_id,
+        UserRoleFarm.user_role_id == collaborator_user_role_id,
         UserRoleFarm.farm_id == farm_id,
         UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
@@ -102,7 +113,7 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
         )
 
     # Verificar que el usuario no esté intentando eliminar su propia asociación
-    if user_role_farm.user_role_id == delete_request.collaborator_user_role_id:
+    if user_role_farm.user_role_id == collaborator_user_role_id:
         logger.warning("Intento de eliminar su propia asociación con la finca")
         return create_response(
             "error",
@@ -111,9 +122,9 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
         )
 
     # Obtener el rol del colaborador
-    collaborator_role_name = get_role_name_for_user_role(delete_request.collaborator_user_role_id)
+    collaborator_role_name = get_role_name_for_user_role(collaborator_user_role_id)
     if not collaborator_role_name or collaborator_role_name == "Unknown":
-        logger.error(f"Rol del colaborador no encontrado para user_role_id {delete_request.collaborator_user_role_id}")
+        logger.error(f"Rol del colaborador no encontrado para user_role_id {collaborator_user_role_id}")
         return create_response(
             "error",
             "Rol del colaborador no encontrado",
@@ -161,7 +172,7 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
         collaborator_role_farm.user_role_farm_state_id = urf_inactive_state.user_role_farm_state_id
         db.commit()
         # Eliminar la relación user_role en el microservicio de usuarios
-        delete_user_role(delete_request.collaborator_user_role_id)
+        delete_user_role(collaborator_user_role_id)
         logger.info(f"Colaborador eliminado de la finca y del microservicio de usuarios exitosamente")
     except Exception as e:
         db.rollback()
