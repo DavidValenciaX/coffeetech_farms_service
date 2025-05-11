@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from farms_service.endpoints.collaborators import EditCollaboratorRoleRequest
+from endpoints.collaborators import EditCollaboratorRoleRequest
 from models.models import Farms, UserRoleFarm
 from utils.response import create_response
 from utils.state import get_state

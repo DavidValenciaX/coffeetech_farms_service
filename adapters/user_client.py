@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from models.models import UserRoleFarm
-from farms_service.dataBase import get_db_session
+from dataBase import get_db_session
 from utils.state import get_state
 import httpx
 import logging
