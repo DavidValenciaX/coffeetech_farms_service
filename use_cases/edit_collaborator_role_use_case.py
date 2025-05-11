@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from domain.schemas import EditCollaboratorRoleRequest
+from domain.schemas import EditCollaboratorRoleRequest, EditCollaboratorRoleResponse
 from models.models import Farms, UserRoleFarm
 from utils.response import create_response
 from utils.state import get_state
@@ -16,7 +16,7 @@ from adapters.user_client import (
 
 logger = logging.getLogger(__name__)
 
-def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: int, user, db: Session):
+def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: int, user, db: Session) -> EditCollaboratorRoleResponse:
     # Verificar que la finca exista
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
@@ -221,8 +221,7 @@ def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: i
         )
 
     # Devolver la respuesta exitosa
-    return create_response(
-        "success",
-        f"Rol del colaborador '{collaborator_info['user_name']}' actualizado a '{new_role_name}' exitosamente",
-        status_code=200
+    return EditCollaboratorRoleResponse(
+        status="success",
+        message=f"Rol del colaborador '{collaborator_info['user_name']}' actualizado a '{new_role_name}' exitosamente"
     )

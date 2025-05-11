@@ -65,6 +65,31 @@ class DeleteCollaboratorRequest(BaseModel):
         if self.collaborator_id <= 0:
             raise ValueError("El `collaborator_id` debe ser un entero positivo.")
 
+# --- Collaborators Response Schemas ---
+
+from typing import List, Optional
+
+class CollaboratorInfo(BaseModel):
+    user_role_id: int
+    user_id: int
+    user_name: str
+    user_email: str
+    role_id: int
+    role_name: str
+
+class ListCollaboratorsResponse(BaseModel):
+    status: str
+    message: str
+    collaborators: List[CollaboratorInfo]
+
+class EditCollaboratorRoleResponse(BaseModel):
+    status: str
+    message: str
+
+class DeleteCollaboratorResponse(BaseModel):
+    status: str
+    message: str
+
 # --- Farms Service (internal) ---
 class FarmDetailResponse(BaseModel):
     farm_id: int

@@ -12,13 +12,16 @@ from use_cases.delete_collaborator_use_case import delete_collaborator
 from domain.schemas import (
     EditCollaboratorRoleRequest,
     DeleteCollaboratorRequest,
+    ListCollaboratorsResponse,
+    EditCollaboratorRoleResponse,
+    DeleteCollaboratorResponse,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.get("/list-collaborators", response_model=Dict[str, Any])
+@router.get("/list-collaborators", response_model=ListCollaboratorsResponse)
 def list_collaborators_endpoint(
     farm_id: int,
     session_token: str,
@@ -34,7 +37,7 @@ def list_collaborators_endpoint(
     logger.info(f"Usuario autenticado: {user.name} (ID: {user.user_id})")
     return list_collaborators(farm_id, user, db=db)
 
-@router.post("/edit-collaborator-role", response_model=Dict[str, Any])
+@router.post("/edit-collaborator-role", response_model=EditCollaboratorRoleResponse)
 def edit_collaborator_role_endpoint(
     edit_request: EditCollaboratorRoleRequest, 
     farm_id: int,
@@ -81,7 +84,7 @@ def edit_collaborator_role_endpoint(
     # Lógica de negocio delegada al use case (already expects new_role_id in edit_request)
     return edit_collaborator_role(edit_request, farm_id, user, db)
 
-@router.post("/delete-collaborator", response_model=Dict[str, Any])
+@router.post("/delete-collaborator", response_model=DeleteCollaboratorResponse)
 def delete_collaborator_endpoint(
     delete_request: DeleteCollaboratorRequest,
     farm_id: int,

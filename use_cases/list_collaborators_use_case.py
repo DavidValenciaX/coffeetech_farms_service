@@ -9,18 +9,19 @@ from adapters.user_client import (
     get_role_permissions_for_user_role,
     get_collaborators_info
 )
+from domain.schemas import ListCollaboratorsResponse, CollaboratorInfo
 
 logger = logging.getLogger(__name__)
 
-def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
+def list_collaborators(farm_id: int, user, db: Session) -> ListCollaboratorsResponse:
     # Verificar que la finca exista
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
         logger.error(f"Finca con ID {farm_id} no encontrada")
-        return create_response(
-            "error",
-            "Finca no encontrada",
-            status_code=404
+        return ListCollaboratorsResponse(
+            status="error",
+            message="Finca no encontrada",
+            collaborators=[]
         )
 
     logger.info(f"Finca encontrada: {farm.name} (ID: {farm.farm_id})")
@@ -29,10 +30,10 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
     urf_active_state = get_state(db, "Activo", "user_role_farm")
     if not urf_active_state:
         logger.error("Estado 'Activo' no encontrado para 'user_role_farm'")
-        return create_response(
-            "error",
-            "Estado 'Activo' no encontrado para 'user_role_farm'",
-            status_code=400
+        return ListCollaboratorsResponse(
+            status="error",
+            message="Estado 'Activo' no encontrado para 'user_role_farm'",
+            collaborators=[]
         )
 
     # Obtener los user_role_ids del usuario desde el microservicio de usuarios
@@ -40,7 +41,11 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
         user_role_ids = get_user_role_ids(user.user_id)
     except Exception as e:
         logger.error("No se pudieron obtener los user_role_ids: %s", str(e))
-        return create_response("error", "No se pudieron obtener los roles del usuario", status_code=500)
+        return ListCollaboratorsResponse(
+            status="error",
+            message="No se pudieron obtener los roles del usuario",
+            collaborators=[]
+        )
 
     # Verificar si el usuario tiene un rol en la finca
     user_role_farm = db.query(UserRoleFarm).filter(
@@ -50,10 +55,10 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
     ).first()
     if not user_role_farm:
         logger.warning(f"El usuario no está asociado con la finca con ID {farm_id}")
-        return create_response(
-            "error",
-            "No tienes permiso para ver los colaboradores de esta finca",
-            status_code=403
+        return ListCollaboratorsResponse(
+            status="error",
+            message="No tienes permiso para ver los colaboradores de esta finca",
+            collaborators=[]
         )
 
     # Verificar permiso 'read_collaborators' usando el microservicio de usuarios
@@ -61,14 +66,18 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
         permissions = get_role_permissions_for_user_role(user_role_farm.user_role_id)
     except Exception as e:
         logger.error("No se pudieron obtener los permisos del rol: %s", str(e))
-        return create_response("error", "No se pudieron obtener los permisos del rol", status_code=500)
+        return ListCollaboratorsResponse(
+            status="error",
+            message="No se pudieron obtener los permisos del rol",
+            collaborators=[]
+        )
 
     if "read_collaborators" not in permissions:
         logger.warning("El rol del usuario no tiene permiso para ver los colaboradores en la finca")
-        return create_response(
-            "error",
-            "No tienes permiso para ver los colaboradores de esta finca",
-            status_code=403
+        return ListCollaboratorsResponse(
+            status="error",
+            message="No tienes permiso para ver los colaboradores de esta finca",
+            collaborators=[]
         )
 
     # Obtener todos los user_role_farm activos de la finca
@@ -83,15 +92,14 @@ def list_collaborators(farm_id: int, user, db: Session) -> Dict[str, Any]:
         collaborators_list = get_collaborators_info(user_role_ids_farm)
     except Exception as e:
         logger.error("No se pudo obtener la información de los colaboradores desde el microservicio de usuarios: %s", str(e))
-        return create_response(
-            "error",
-            "No se pudo obtener la información de los colaboradores",
-            status_code=500
+        return ListCollaboratorsResponse(
+            status="error",
+            message="No se pudo obtener la información de los colaboradores",
+            collaborators=[]
         )
 
-    return create_response(
-        "success",
-        "Colaboradores obtenidos exitosamente",
-        data=collaborators_list,
-        status_code=200
+    return ListCollaboratorsResponse(
+        status="success",
+        message="Colaboradores obtenidos exitosamente",
+        collaborators=[CollaboratorInfo(**c) for c in collaborators_list]
     )

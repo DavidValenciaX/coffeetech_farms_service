@@ -11,10 +11,11 @@ from adapters.user_client import (
     delete_user_role,
     get_user_role_id_for_farm
 )
+from domain.schemas import DeleteCollaboratorResponse
 
 logger = logging.getLogger(__name__)
 
-def delete_collaborator(delete_request, farm_id: int, user, db: Session):
+def delete_collaborator(delete_request, farm_id: int, user, db: Session) -> DeleteCollaboratorResponse:
     # Verificar que la finca exista
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
@@ -184,8 +185,7 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session):
         )
 
     # Devolver la respuesta exitosa
-    return create_response(
-        "success",
-        f"Colaborador '{collaborator_info['user_name']}' eliminado exitosamente de la finca '{farm.name}'",
-        status_code=200
+    return DeleteCollaboratorResponse(
+        status="success",
+        message=f"Colaborador '{collaborator_info['user_name']}' eliminado exitosamente de la finca '{farm.name}'"
     )
