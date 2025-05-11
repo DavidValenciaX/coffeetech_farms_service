@@ -10,7 +10,8 @@ from adapters.user_client import (
     get_role_permissions_for_user_role,
     get_collaborators_info,
     update_user_role,
-    get_user_role_id_for_farm
+    get_user_role_id_for_farm,
+    get_role_name_by_id
 )
 
 logger = logging.getLogger(__name__)
@@ -133,25 +134,35 @@ def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: i
         )
 
     logger.info(f"Rol actual del colaborador: {collaborator_current_role_name}")
-
-    # Verificar si el colaborador ya tiene el rol deseado
-    if collaborator_current_role_name == edit_request.new_role:
-        logger.info(f"El colaborador ya tiene el rol '{edit_request.new_role}'")
+    
+    # Obtener el nombre del nuevo rol
+    new_role_name = get_role_name_by_id(edit_request.new_role_id)
+    if not new_role_name:
+        logger.error(f"Rol con ID {edit_request.new_role_id} no encontrado")
         return create_response(
             "error",
-            f"El colaborador ya tiene el rol '{edit_request.new_role}'",
+            f"Rol con ID {edit_request.new_role_id} no encontrado",
+            status_code=400
+        )
+    
+    # Verificar si el colaborador ya tiene el rol deseado
+    if collaborator_current_role_name == new_role_name:
+        logger.info(f"El colaborador ya tiene el rol '{new_role_name}'")
+        return create_response(
+            "error",
+            f"El colaborador ya tiene el rol '{new_role_name}'",
             status_code=400
         )
 
     # Verificar permisos necesarios para cambiar al nuevo rol
     permission_name = ""
-    if edit_request.new_role == "Administrador de finca":
+    if new_role_name == "Administrador de finca":
         permission_name = "edit_administrator_farm"
-    elif edit_request.new_role == "Operador de campo":
+    elif new_role_name == "Operador de campo":
         permission_name = "edit_operator_farm"
 
     if not permission_name:
-        logger.error(f"Rol deseado '{edit_request.new_role}' no es válido")
+        logger.error(f"Rol deseado '{new_role_name}' no es válido")
         return create_response(
             "error",
             "Rol deseado no válido",
@@ -164,7 +175,7 @@ def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: i
         logger.warning(f"Usuario no tiene permiso '{permission_name}'")
         return create_response(
             "error",
-            f"No tienes permiso para asignar el rol '{edit_request.new_role}'",
+            f"No tienes permiso para asignar el rol '{new_role_name}'",
             status_code=403
         )
 
@@ -187,20 +198,20 @@ def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: i
 
     allowed_roles_to_assign = hierarchy.get(current_user_role_name, [])
 
-    if edit_request.new_role not in allowed_roles_to_assign:
-        logger.warning(f"Rol '{edit_request.new_role}' no puede ser asignado por un usuario con rol '{current_user_role_name}'")
+    if new_role_name not in allowed_roles_to_assign:
+        logger.warning(f"Rol '{new_role_name}' no puede ser asignado por un usuario con rol '{current_user_role_name}'")
         return create_response(
             "error",
-            f"No tienes permiso para asignar el rol '{edit_request.new_role}'",
+            f"No tienes permiso para asignar el rol '{new_role_name}'",
             status_code=403
         )
 
-    logger.info(f"Rol '{edit_request.new_role}' puede ser asignado por un usuario con rol '{current_user_role_name}'")
+    logger.info(f"Rol '{new_role_name}' puede ser asignado por un usuario con rol '{current_user_role_name}'")
 
     # Actualizar el rol del colaborador llamando al microservicio de usuarios
     try:
-        update_user_role(collaborator_user_role_id, edit_request.new_role)
-        logger.info(f"Rol del colaborador actualizado a '{edit_request.new_role}'")
+        update_user_role(collaborator_user_role_id, edit_request.new_role_id)
+        logger.info(f"Rol del colaborador actualizado a '{new_role_name}'")
     except Exception as e:
         logger.error(f"Error al actualizar el rol del colaborador: {str(e)}")
         return create_response(
@@ -212,6 +223,6 @@ def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: i
     # Devolver la respuesta exitosa
     return create_response(
         "success",
-        f"Rol del colaborador '{collaborator_info['user_name']}' actualizado a '{edit_request.new_role}' exitosamente",
+        f"Rol del colaborador '{collaborator_info['user_name']}' actualizado a '{new_role_name}' exitosamente",
         status_code=200
     )
