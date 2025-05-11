@@ -1,6 +1,6 @@
 # CoffeeTech Farms Service
 
-This service handles farms and plots mangament for the CoffeeTech platform.
+This service handles farms and plots management for the CoffeeTech platform.
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ uv sync
 To run the service in development mode:
 
 ```bash
-uv run fastapi dev
+uv run fastapi dev --port 8002
 ```
 
 ## Running the Service (Production)
@@ -50,14 +50,19 @@ uv run fastapi run
 
 ## Docker Deployment
 
-To build and run the service with Docker:
+To build and run the service with Docker Compose:
 
 ```bash
-docker build -t coffeetech-farms-service .
-docker run -p 8002:8000 --env-file .env coffeetech-farms-service
+docker compose up --build -d
 ```
 
-This will expose the service at [http://localhost:8002](http://localhost:8002).
+This will build the image and start the service in detached mode, exposing it at [http://localhost:8002](http://localhost:8002).
+
+To stop the service, run:
+
+```bash
+docker compose down
+```
 
 ## Project Structure
 
@@ -70,6 +75,7 @@ farms_service/
 ├── pyproject.toml
 ├── .env
 ├── Dockerfile
+├── docker-compose.yml
 └── ...
 ```
 
@@ -77,3 +83,4 @@ farms_service/
 
 - The Dockerfile uses `uv` for dependency management and runs FastAPI directly.
 - The `.dockerignore` file is used to exclude unnecessary files from the Docker build context.
+- Docker Compose is now the recommended way to build and run the service in development and production.
