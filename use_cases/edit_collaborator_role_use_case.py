@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from farms_service.endpoints.collaborators import EditCollaboratorRoleRequest
 from models.models import Farms, UserRoleFarm
 from utils.response import create_response
 from utils.state import get_state
@@ -9,12 +10,13 @@ from adapters.user_client import (
     get_role_name_for_user_role,
     get_role_permissions_for_user_role,
     get_collaborators_info,
-    update_user_role
+    update_user_role,
+    get_user_role_id_for_farm
 )
 
 logger = logging.getLogger(__name__)
 
-def edit_collaborator_role(edit_request, farm_id: int, user, db: Session):
+def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: int, user, db: Session):
     # Verificar que la finca exista
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
@@ -70,26 +72,36 @@ def edit_collaborator_role(edit_request, farm_id: int, user, db: Session):
 
     logger.info(f"Rol del usuario: {current_user_role_name}")
 
+    # Get the user_role_id for the collaborator in this farm
+    collaborator_user_role_id = get_user_role_id_for_farm(edit_request.collaborator_id, farm_id, db)
+    if not collaborator_user_role_id:
+        logger.error(f"No se encontró el rol del colaborador con ID {edit_request.collaborator_id} en la finca {farm_id}")
+        return create_response(
+            "error",
+            "Colaborador no encontrado en esta finca",
+            status_code=404
+        )
+
     # Obtener info del colaborador a editar usando get_collaborators_info
     try:
-        collaborator_info_list = get_collaborators_info([edit_request.collaborator_user_role_id])
+        collaborator_info_list = get_collaborators_info([collaborator_user_role_id])
         collaborator_info = collaborator_info_list[0] if collaborator_info_list else None
     except Exception as e:
         logger.error(f"Error al obtener info del colaborador: {str(e)}")
         collaborator_info = None
 
     if not collaborator_info:
-        logger.error(f"Colaborador con user_role_id {edit_request.collaborator_user_role_id} no encontrado")
+        logger.error(f"Colaborador con user_role_id {collaborator_user_role_id} no encontrado")
         return create_response(
             "error",
             "Colaborador no encontrado",
             status_code=404
         )
 
-    logger.info(f"Colaborador a editar: {collaborator_info['user_name']} (user_role_id: {edit_request.collaborator_user_role_id})")
+    logger.info(f"Colaborador a editar: {collaborator_info['user_name']} (user_role_id: {collaborator_user_role_id})")
 
     # Verificar que el usuario no esté intentando cambiar su propio rol
-    if user_role_farm.user_role_id == edit_request.collaborator_user_role_id:
+    if user_role_farm.user_role_id == collaborator_user_role_id:
         logger.warning("Intento de cambiar el propio rol")
         return create_response(
             "error",
@@ -99,7 +111,7 @@ def edit_collaborator_role(edit_request, farm_id: int, user, db: Session):
 
     # Verificar que el colaborador esté asociado a la finca y activo
     collaborator_role_farm = db.query(UserRoleFarm).filter(
-        UserRoleFarm.user_role_id == edit_request.collaborator_user_role_id,
+        UserRoleFarm.user_role_id == collaborator_user_role_id,
         UserRoleFarm.farm_id == farm_id,
         UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
@@ -112,9 +124,9 @@ def edit_collaborator_role(edit_request, farm_id: int, user, db: Session):
         )
 
     # Obtener el rol actual del colaborador
-    collaborator_current_role_name = get_role_name_for_user_role(edit_request.collaborator_user_role_id)
+    collaborator_current_role_name = get_role_name_for_user_role(collaborator_user_role_id)
     if not collaborator_current_role_name or collaborator_current_role_name == "Unknown":
-        logger.error(f"Rol actual del colaborador no encontrado para user_role_id {edit_request.collaborator_user_role_id}")
+        logger.error(f"Rol actual del colaborador no encontrado para user_role_id {collaborator_user_role_id}")
         return create_response(
             "error",
             "Rol actual del colaborador no encontrado",
@@ -188,7 +200,7 @@ def edit_collaborator_role(edit_request, farm_id: int, user, db: Session):
 
     # Actualizar el rol del colaborador llamando al microservicio de usuarios
     try:
-        update_user_role(edit_request.collaborator_user_role_id, edit_request.new_role)
+        update_user_role(collaborator_user_role_id, edit_request.new_role)
         logger.info(f"Rol del colaborador actualizado a '{edit_request.new_role}'")
     except Exception as e:
         logger.error(f"Error al actualizar el rol del colaborador: {str(e)}")

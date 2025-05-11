@@ -1,6 +1,11 @@
 from typing import Optional, Any, Dict, List, Union
+from fastapi import Depends
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
+from models.models import UserRoleFarm
+from farms_service.dataBase import get_db_session
+from utils.state import get_state
 import httpx
 import logging
 import os
@@ -213,3 +218,38 @@ def delete_user_role(user_role_id: int) -> None:
     )
     if not response or response.get("status") != "success":
         raise Exception(f"No se pudo eliminar el user_role_id {user_role_id}: {response}")
+
+def get_user_role_id_for_farm(user_id: int, farm_id: int, db: Session = Depends(get_db_session)) -> Optional[int]:
+    """
+    Gets the user_role_id for a specific user in a specific farm.
+    
+    Args:
+        user_id (int): ID of the user
+        farm_id (int): ID of the farm
+        db (Session): Database session
+        
+    Returns:
+        int: The user_role_id if found, None otherwise
+    """
+    
+    # Get all user_role_ids for the user
+    try:
+        user_role_ids = get_user_role_ids(user_id)
+    except Exception as e:
+        logger.error(f"Could not get user_role_ids for user {user_id}: {e}")
+        return None
+    
+    active_state = get_state(db, "Activo", "user_role_farm")
+    if not active_state:
+        logger.error("Could not get active state for user_role_farm")
+        return None
+        
+    user_role_farm = db.query(UserRoleFarm).filter(
+        UserRoleFarm.user_role_id.in_(user_role_ids),
+        UserRoleFarm.farm_id == farm_id,
+        UserRoleFarm.user_role_farm_state_id == active_state.user_role_farm_state_id
+    ).first()
+    
+    if user_role_farm:
+        return user_role_farm.user_role_id
+    return None

@@ -39,18 +39,15 @@ class EditCollaboratorRoleRequest(BaseModel):
     Modelo Pydantic para la solicitud de edición de rol de un colaborador.
 
     Attributes:
-        collaborator_user_role_id (int): ID de la relación usuario-rol del colaborador cuyo rol se desea editar.
+        collaborator_id (int): ID del usuario colaborador cuyo rol se desea editar.
         new_role_id (int): ID del nuevo rol que se asignará al colaborador.
     """
-    collaborator_user_role_id: int = Field(..., alias="collaborator_user_role_id") # Changed alias if needed, or keep original if API expects this name
-    new_role_id: int # Changed from new_role: str
+    collaborator_id: int
+    new_role_id: int
 
     class Config:
         populate_by_name = True
         from_attributes = True
-
-    # Removed validate_input method as role name validation is no longer needed here.
-    # The existence of new_role_id will be checked by the user service.
         
 # Modelo Pydantic para la solicitud de eliminación de colaborador
 class DeleteCollaboratorRequest(BaseModel):
@@ -88,7 +85,7 @@ def list_collaborators_endpoint(
 
 @router.post("/edit-collaborator-role", response_model=Dict[str, Any])
 def edit_collaborator_role_endpoint(
-    edit_request: EditCollaboratorRoleRequest, # Uses the updated model
+    edit_request: EditCollaboratorRoleRequest, 
     farm_id: int,
     session_token: str,
     db: Session = Depends(get_db_session)
@@ -98,15 +95,15 @@ def edit_collaborator_role_endpoint(
     Endpoint para editar el rol de un colaborador en una finca específica.
 
     ### Parámetros:
-    - **edit_request (EditCollaboratorRoleRequest)**: Objeto con los campos `collaborator_user_id` y `new_role`, que contiene la información del colaborador y el nuevo rol que se le asignará.
+    - **edit_request (EditCollaboratorRoleRequest)**: Objeto con los campos `collaborator_id` y `new_role_id`, que contiene la ID del usuario colaborador y el ID del nuevo rol que se le asignará.
     - **farm_id (int)**: ID de la finca donde se cambiará el rol del colaborador.
     - **session_token (str)**: Token de sesión del usuario autenticado que está realizando la acción.
     - **db (Session)**: Sesión de la base de datos obtenida mediante la dependencia `get_db_session`.
 
     ### Proceso:
-    1. **Validación de entrada**: Se valida la solicitud recibida.
-    2. **Autenticación**: Se verifica el `session_token` para autenticar al usuario.
-    3. **Verificación de la finca**: Se comprueba si la finca existe.
+    1. **Autenticación**: Se verifica el `session_token` para autenticar al usuario.
+    2. **Verificación de la finca**: Se comprueba si la finca existe.
+    3. **Búsqueda de rol del colaborador**: Se busca el rol actual del colaborador en la finca especificada.
     4. **Estado 'Activo'**: Se busca el estado 'Activo' para roles en fincas (`user_role_farm`).
     5. **Rol actual del usuario**: Se verifica el rol del usuario que realiza la acción en la finca.
     6. **Verificación del colaborador**: Se obtiene al colaborador cuyo rol se desea editar.
@@ -114,28 +111,15 @@ def edit_collaborator_role_endpoint(
     8. **Rol del colaborador actual**: Se comprueba el rol actual del colaborador en la finca.
     9. **Permisos necesarios**: Se verifican los permisos del usuario para asignar el nuevo rol.
     10. **Jerarquía de roles**: Se valida la jerarquía de roles para determinar si el usuario puede asignar el nuevo rol.
-    11. **Rol objetivo**: Se obtiene el rol que se desea asignar al colaborador.
-    12. **Actualización del rol**: Se actualiza el rol del colaborador en la base de datos.
+    11. **Actualización del rol**: Se actualiza el rol del colaborador en la base de datos.
     
     ### Respuestas:
     - **200 (success)**: El rol del colaborador ha sido actualizado exitosamente.
     - **400 (error)**: Error de validación de entrada o intento de asignar el mismo rol.
     - **403 (error)**: El usuario no tiene permisos suficientes o intentó cambiar su propio rol.
-    - **404 (error)**: La finca o el colaborador no existen.
+    - **404 (error)**: La finca, el colaborador o su rol en la finca no existen.
     - **500 (error)**: Error interno del servidor al procesar la solicitud.
-
     """
-
-    # Validar la entrada
-    """try:
-        edit_request.validate_input()
-    except ValueError as e:
-        logger.error(f"Validación de entrada fallida: {str(e)}")
-        return create_response(
-            "error",
-            str(e),
-            status_code=400
-        )"""
         
     user = verify_session_token(session_token)
     if not user:
