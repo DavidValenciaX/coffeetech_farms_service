@@ -9,9 +9,9 @@ from adapters.user_client import (
     get_role_name_for_user_role,
     get_role_permissions_for_user_role,
     get_collaborators_info,
-    update_user_role,
     get_user_role_id_for_farm,
-    get_role_name_by_id
+    get_role_name_by_id,
+    create_user_role_for_farm  # Import the new function
 )
 
 logger = logging.getLogger(__name__)
@@ -210,10 +210,20 @@ def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: i
 
     # Actualizar el rol del colaborador llamando al microservicio de usuarios
     try:
-        update_user_role(collaborator_user_role_id, edit_request.new_role_id)
-        logger.info(f"Rol del colaborador actualizado a '{new_role_name}'")
+        # Get the user_id from the collaborator info
+        collaborator_user_id = collaborator_info['user_id']
+        
+        # Create a new user_role entry with the new role
+        new_user_role_id = create_user_role_for_farm(collaborator_user_id, edit_request.new_role_id)
+        
+        # Update the user_role_farm entry to point to the new user_role_id
+        collaborator_role_farm.user_role_id = new_user_role_id
+        db.commit()
+        
+        logger.info(f"Rol del colaborador actualizado a '{new_role_name}' solo para la finca {farm_id}")
     except Exception as e:
         logger.error(f"Error al actualizar el rol del colaborador: {str(e)}")
+        db.rollback()
         return create_response(
             "error",
             "Error al actualizar el rol del colaborador",

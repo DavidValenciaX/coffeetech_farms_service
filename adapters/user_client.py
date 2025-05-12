@@ -248,3 +248,33 @@ def get_user_role_id_for_farm(user_id: int, farm_id: int, db: Session = Depends(
     if user_role_farm:
         return user_role_farm.user_role_id
     return None
+
+def create_user_role_for_farm(user_id: int, role_id: int) -> int:
+    """
+    Creates a new user_role entry for the user with the given role_id.
+    Returns the new user_role_id.
+    
+    Args:
+        user_id (int): The user ID
+        role_id (int): The role ID to assign
+        
+    Returns:
+        int: The new user_role_id
+        
+    Raises:
+        Exception: If the request fails
+    """
+    # Get role name first (needed by the API)
+    role_name = get_role_name_by_id(role_id)
+    if not role_name:
+        raise Exception(f"Could not get role name for role_id {role_id}")
+    
+    response = _make_request(
+        "/users-service/user-role",
+        method="POST",
+        data={"user_id": user_id, "role_name": role_name}
+    )
+    if response and "user_role_id" in response:
+        return response["user_role_id"]
+    else:
+        raise Exception(f"Error creating user_role for user {user_id} with role ID {role_id}")
