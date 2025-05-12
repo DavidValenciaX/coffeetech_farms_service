@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr
-from typing import Dict, Any
+from pydantic import BaseModel, Field
+from typing import List
 
 # --- Farms ---
 class CreateFarmRequest(BaseModel):
@@ -66,8 +66,6 @@ class DeleteCollaboratorRequest(BaseModel):
             raise ValueError("El `collaborator_id` debe ser un entero positivo.")
 
 # --- Collaborators Response Schemas ---
-
-from typing import List, Optional
 
 class CollaboratorInfo(BaseModel):
     user_role_id: int
