@@ -18,6 +18,30 @@ logger = logging.getLogger(__name__)
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://localhost:8000")
 DEFAULT_TIMEOUT = 10.0
 
+class UserRoleRetrievalError(Exception):
+    """Custom exception for errors retrieving user roles."""
+    pass
+
+class UserRoleCreationError(Exception):
+    """Custom exception for errors creating user roles."""
+    pass
+
+class UserRoleUpdateError(Exception):
+    """Custom exception for errors updating user roles."""
+    pass
+
+class CollaboratorInfoError(Exception):
+    """Custom exception for errors retrieving collaborator information."""
+    pass
+
+class UserRoleDeletionError(Exception):
+    """Custom exception for errors deleting user roles."""
+    pass
+
+class RoleNameNotFoundError(Exception):
+    """Custom exception for when a role name cannot be found for a given role_id."""
+    pass
+
 def _make_request(
     endpoint: str,
     method: str = "GET",
@@ -90,7 +114,7 @@ def get_user_role_ids(user_id: int) -> List[int]:
     if response:
         return response.get("user_role_ids", [])
     else:
-        raise Exception(f"Error retrieving user_role_ids for user {user_id}")
+        raise UserRoleRetrievalError(f"Error retrieving user_role_ids for user {user_id}")
 
 def verify_session_token(session_token: str) -> Optional[Union[Dict[str, Any], UserResponse]]:
     """
@@ -136,7 +160,7 @@ def create_user_role(user_id: int, role_name: str) -> dict:
     if response and "user_role_id" in response:
         return response
     else:
-        raise Exception(f"Error creating user_role for user {user_id} with role '{role_name}': {response}")
+        raise UserRoleCreationError(f"Error creating user_role for user {user_id} with role '{role_name}': {response}")
 
 def get_role_permissions_for_user_role(user_role_id: int) -> list:
     """
@@ -182,7 +206,7 @@ def update_user_role(user_role_id: int, new_role_id: int) -> None:
     if not response or response.get("status") != "success":
         # Include response details in the exception message if available
         error_detail = response.get("message", "Unknown error") if response else "No response"
-        raise Exception(f"No se pudo actualizar el rol del user_role_id {user_role_id} al role_id {new_role_id}: {error_detail}")
+        raise UserRoleUpdateError(f"No se pudo actualizar el rol del user_role_id {user_role_id} al role_id {new_role_id}: {error_detail}")
 
 def get_collaborators_info(user_role_ids: list) -> list:
     """
@@ -200,7 +224,7 @@ def get_collaborators_info(user_role_ids: list) -> list:
     if response and "collaborators" in response:
         return response["collaborators"]
     else:
-        raise Exception("No se pudo obtener la información de los colaboradores desde el microservicio de usuarios")
+        raise CollaboratorInfoError("No se pudo obtener la información de los colaboradores desde el microservicio de usuarios")
 
 def delete_user_role(user_role_id: int) -> None:
     """
@@ -212,7 +236,7 @@ def delete_user_role(user_role_id: int) -> None:
         method="POST"
     )
     if not response or response.get("status") != "success":
-        raise Exception(f"No se pudo eliminar el user_role_id {user_role_id}: {response}")
+        raise UserRoleDeletionError(f"No se pudo eliminar el user_role_id {user_role_id}: {response}")
 
 def get_user_role_id_for_farm(user_id: int, farm_id: int, db: Session = Depends(get_db_session)) -> Optional[int]:
     """
@@ -267,7 +291,7 @@ def create_user_role_for_farm(user_id: int, role_id: int) -> int:
     # Get role name first (needed by the API)
     role_name = get_role_name_by_id(role_id)
     if not role_name:
-        raise Exception(f"Could not get role name for role_id {role_id}")
+        raise RoleNameNotFoundError(f"Could not get role name for role_id {role_id}")
     
     response = _make_request(
         "/users-service/user-role",
@@ -277,4 +301,4 @@ def create_user_role_for_farm(user_id: int, role_id: int) -> int:
     if response and "user_role_id" in response:
         return response["user_role_id"]
     else:
-        raise Exception(f"Error creating user_role for user {user_id} with role ID {role_id}")
+        raise UserRoleCreationError(f"Error creating user_role for user {user_id} with role ID {role_id}")
