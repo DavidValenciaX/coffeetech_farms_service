@@ -9,6 +9,9 @@ from adapters.user_client import get_user_role_ids, create_user_role
 
 logger = logging.getLogger(__name__)
 
+ERROR_MSG_ACTIVE_FARM_STATE_NOT_FOUND = "No se encontró el estado 'Activo' para el tipo 'Farms'"
+ERROR_MSG_ACTIVE_URF_STATE_NOT_FOUND = "No se encontró el estado 'Activo' para el tipo 'user_role_farm'"
+
 def create_farm(request, user, db: Session):
     # Validación 1: El nombre de la finca no puede estar vacío ni contener solo espacios
     if not request.name or not request.name.strip():
@@ -33,14 +36,14 @@ def create_farm(request, user, db: Session):
     # Obtener el state "Activo" para el tipo "Farms"
     active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farms'", status_code=400)
+        logger.error(ERROR_MSG_ACTIVE_FARM_STATE_NOT_FOUND)
+        return create_response("error", ERROR_MSG_ACTIVE_FARM_STATE_NOT_FOUND, status_code=400)
 
     # Comprobar si el usuario ya tiene una finca activa con el mismo nombre
     active_urf_state = get_state(db, "Activo", "user_role_farm")
     if not active_urf_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
+        logger.error(ERROR_MSG_ACTIVE_URF_STATE_NOT_FOUND)
+        return create_response("error", ERROR_MSG_ACTIVE_URF_STATE_NOT_FOUND, status_code=400)
 
     # Obtener los user_role_ids desde el microservicio de usuarios
     try:
@@ -69,8 +72,8 @@ def create_farm(request, user, db: Session):
     # Obtener el state "Activo" para el tipo "Farms" utilizando get_state
     farm_state_record = get_state(db, "Activo", "Farms")
     if not farm_state_record:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farms'", status_code=400)
+        logger.error(ERROR_MSG_ACTIVE_FARM_STATE_NOT_FOUND)
+        return create_response("error", ERROR_MSG_ACTIVE_FARM_STATE_NOT_FOUND, status_code=400)
 
     try:
         # Crear la nueva finca
@@ -101,9 +104,9 @@ def create_farm(request, user, db: Session):
         # Get active state for UserRoleFarm
         active_urf_state = get_state(db, "Activo", "user_role_farm")
         if not active_urf_state:
-            logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
+            logger.error(ERROR_MSG_ACTIVE_URF_STATE_NOT_FOUND)
             db.rollback()
-            return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
+            return create_response("error", ERROR_MSG_ACTIVE_URF_STATE_NOT_FOUND, status_code=400)
 
         # Crear la relación UserRoleFarm usando el user_role_id recibido
         user_role_farm = UserRoleFarm(
