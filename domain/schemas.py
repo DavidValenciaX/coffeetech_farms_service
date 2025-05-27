@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 
 # --- Farms ---
@@ -47,19 +47,15 @@ class UpdatePlotLocationRequest(BaseModel):
 # --- Collaborators ---
 
 class EditCollaboratorRoleRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+    
     collaborator_id: int
     new_role_id: int
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 class DeleteCollaboratorRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+    
     collaborator_id: int = Field(..., alias="collaborator_id")
-
-    class Config:
-        populate_by_name = True
-        from_attributes = True
 
     def validate_input(self):
         if self.collaborator_id <= 0:
