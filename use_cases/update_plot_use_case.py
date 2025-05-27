@@ -4,7 +4,7 @@ from utils.state import get_state
 from models.models import Plots, Farms, UserRoleFarm, CoffeeVarieties
 import logging
 from adapters.user_client import get_user_role_ids, get_role_permissions_for_user_role
-from sqlalchemy.orm import Session # Added Session for type hinting
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

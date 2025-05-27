@@ -1,4 +1,3 @@
-from typing import Dict, Any
 from sqlalchemy.orm import Session
 from models.models import Farms, UserRoleFarm
 from utils.state import get_state

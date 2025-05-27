@@ -3,7 +3,7 @@ from models.models import Farms, UserRoleFarm, AreaUnits
 from utils.response import create_response
 from utils.state import get_state
 import logging
-from adapters.user_client import get_user_role_ids, get_role_name_for_user_role, get_role_permissions_for_user_role
+from adapters.user_client import get_user_role_ids, get_role_permissions_for_user_role
 
 logger = logging.getLogger(__name__)
 
