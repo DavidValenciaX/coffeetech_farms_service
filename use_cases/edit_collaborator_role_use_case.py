@@ -16,6 +16,11 @@ from adapters.user_client import (
 
 logger = logging.getLogger(__name__)
 
+# Define role name constants
+ADMINISTRADOR_DE_FINCA_ROLE_NAME = "Administrador de finca"
+OPERADOR_DE_CAMPO_ROLE_NAME = "Operador de campo"
+PROPIETARIO_ROLE_NAME = "Propietario"
+
 def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: int, user, db: Session) -> EditCollaboratorRoleResponse:
     # Verificar que la finca exista
     farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
@@ -156,9 +161,9 @@ def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: i
 
     # Verificar permisos necesarios para cambiar al nuevo rol
     permission_name = ""
-    if new_role_name == "Administrador de finca":
+    if new_role_name == ADMINISTRADOR_DE_FINCA_ROLE_NAME:
         permission_name = "edit_administrator_farm"
-    elif new_role_name == "Operador de campo":
+    elif new_role_name == OPERADOR_DE_CAMPO_ROLE_NAME:
         permission_name = "edit_operator_farm"
 
     if not permission_name:
@@ -183,9 +188,9 @@ def edit_collaborator_role(edit_request: EditCollaboratorRoleRequest, farm_id: i
 
     # Verificar la jerarquía de roles
     hierarchy = {
-        "Propietario": ["Administrador de finca", "Operador de campo"],
-        "Administrador de finca": ["Operador de campo"],
-        "Operador de campo": []
+        PROPIETARIO_ROLE_NAME: [ADMINISTRADOR_DE_FINCA_ROLE_NAME, OPERADOR_DE_CAMPO_ROLE_NAME],
+        ADMINISTRADOR_DE_FINCA_ROLE_NAME: [OPERADOR_DE_CAMPO_ROLE_NAME],
+        OPERADOR_DE_CAMPO_ROLE_NAME: []
     }
 
     if current_user_role_name not in hierarchy:

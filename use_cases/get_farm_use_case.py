@@ -6,6 +6,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+FARM_NOT_FOUND_OR_NOT_BELONGS_TO_USER_ERROR = "Finca no encontrada o no pertenece al usuario"
+
 def get_farm(farm_id: int, user, db, ListFarmResponse):
     # Obtener el state "Activo" para la finca y user_role_farm
     active_farm_state = get_state(db, "Activo", "Farms")
@@ -28,7 +30,7 @@ def get_farm(farm_id: int, user, db, ListFarmResponse):
 
         if not user_role_ids:
             logger.warning(f"No se encontraron roles para el usuario {user.user_id}")
-            return create_response("error", "Finca no encontrada o no pertenece al usuario")
+            return create_response("error", FARM_NOT_FOUND_OR_NOT_BELONGS_TO_USER_ERROR)
 
         # Buscar la finca asociada a alguno de los user_role_ids activos
         farm_data = db.query(Farms, AreaUnits, FarmStates, UserRoleFarm).select_from(UserRoleFarm).join(
@@ -47,7 +49,7 @@ def get_farm(farm_id: int, user, db, ListFarmResponse):
         # Validar si se encontró la finca
         if not farm_data:
             logger.warning("Finca no encontrada o no pertenece al usuario")
-            return create_response("error", "Finca no encontrada o no pertenece al usuario")
+            return create_response("error", FARM_NOT_FOUND_OR_NOT_BELONGS_TO_USER_ERROR)
 
         farm, area_unit, farm_state, user_role_farm = farm_data
 

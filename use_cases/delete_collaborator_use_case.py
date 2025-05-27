@@ -174,7 +174,7 @@ def delete_collaborator(delete_request, farm_id: int, user, db: Session) -> Dele
         db.commit()
         # Eliminar la relación user_role en el microservicio de usuarios
         delete_user_role(collaborator_user_role_id)
-        logger.info(f"Colaborador eliminado de la finca y del microservicio de usuarios exitosamente")
+        logger.info("Colaborador eliminado de la finca y del microservicio de usuarios exitosamente")
     except Exception as e:
         db.rollback()
         logger.error(f"Error al eliminar el colaborador: {str(e)}")
