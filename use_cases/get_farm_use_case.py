@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 FARM_NOT_FOUND_OR_NOT_BELONGS_TO_USER_ERROR = "Finca no encontrada o no pertenece al usuario"
 
-def get_farm(farm_id: int, user, db, ListFarmResponse):
+def get_farm(farm_id: int, user, db, list_farm_response):
     # Obtener el state "Activo" para la finca y user_role_farm
     active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:
@@ -57,7 +57,7 @@ def get_farm(farm_id: int, user, db, ListFarmResponse):
         role_name = get_role_name_for_user_role(user_role_farm.user_role_id)
 
         # Crear la respuesta en el formato esperado
-        farm_response = ListFarmResponse(
+        farm_response = list_farm_response(
             farm_id=farm.farm_id,
             name=farm.name,
             area=farm.area,

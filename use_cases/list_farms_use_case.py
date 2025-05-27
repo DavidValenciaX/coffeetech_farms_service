@@ -7,7 +7,7 @@ from adapters.user_client import get_role_name_for_user_role, get_user_role_ids
 
 logger = logging.getLogger(__name__)
 
-def list_farms(user, db, ListFarmResponse):
+def list_farms(user, db, list_farm_response):
     # Obtener el state "Activo" para el tipo "Farms"
     active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:
@@ -50,7 +50,7 @@ def list_farms(user, db, ListFarmResponse):
             # Get role name from user service
             role_name = get_role_name_for_user_role(user_role_farm.user_role_id)
             
-            farm_list.append(ListFarmResponse(
+            farm_list.append(list_farm_response(
                 farm_id=farm.farm_id,
                 name=farm.name,
                 area=farm.area,
