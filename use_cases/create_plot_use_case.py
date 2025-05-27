@@ -8,129 +8,128 @@ from adapters.user_client import get_user_role_ids, get_role_permissions_for_use
 
 logger = logging.getLogger(__name__)
 
-def create_plot(request, user, db: Session):
-    """
-    Lógica de negocio para crear un nuevo lote (plot) en una finca.
-    """
-
-    # Obtener los estados "Activo" para Farms y UserRoleFarm
+def _get_required_states(db: Session):
+    """Get all required states for plot creation."""
     active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farms'", status_code=400)
+        return None, create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farms'", status_code=400)
 
     active_urf_state = get_state(db, "Activo", "user_role_farm")
     if not active_urf_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
+        return None, create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
-    # Obtener el estado "Activo" para Plots
     active_plot_state = get_state(db, "Activo", "Plots")
     if not active_plot_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Plots'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plots'", status_code=400)
+        return None, create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plots'", status_code=400)
 
-    # Verificar que la finca existe y está activa
-    farm = db.query(Farms).filter(Farms.farm_id == request.farm_id, Farms.farm_state_id == active_farm_state.farm_state_id).first()
+    inactive_plot_state = get_state(db, "Inactivo", "Plots")
+    if not inactive_plot_state:
+        return None, create_response("error", "No se encontró el estado 'Inactivo' para el tipo 'Plots'", status_code=400)
+
+    return {
+        'active_farm': active_farm_state,
+        'active_urf': active_urf_state,
+        'active_plot': active_plot_state,
+        'inactive_plot': inactive_plot_state
+    }, None
+
+def _validate_farm_access(db: Session, request, user, states):
+    """Validate farm exists and user has access."""
+    farm = db.query(Farms).filter(
+        Farms.farm_id == request.farm_id, 
+        Farms.farm_state_id == states['active_farm'].farm_state_id
+    ).first()
     if not farm:
-        logger.warning("La finca con ID %s no existe o no está activa", request.farm_id)
-        return create_response("error", "La finca no existe o no está activa")
+        return None, create_response("error", "La finca no existe o no está activa")
 
-    # Obtener los user_role_ids del usuario desde el microservicio de usuarios
     try:
         user_role_ids = get_user_role_ids(user.user_id)
     except Exception as e:
         logger.error("No se pudieron obtener los user_role_ids: %s", str(e))
-        return create_response("error", "No se pudieron obtener los roles del usuario", status_code=500)
+        return None, create_response("error", "No se pudieron obtener los roles del usuario", status_code=500)
 
-    # Verificar si el usuario tiene un rol en la finca
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_role_id.in_(user_role_ids),
         UserRoleFarm.farm_id == request.farm_id,
-        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
+        UserRoleFarm.user_role_farm_state_id == states['active_urf'].user_role_farm_state_id
     ).first()
     
     if not user_role_farm:
-        logger.warning("El usuario no está asociado con la finca con ID %s", request.farm_id)
-        return create_response("error", "No tienes permiso para agregar un lote en esta finca")
+        return None, create_response("error", "No tienes permiso para agregar un lote en esta finca")
 
-    # Verificar permiso 'add_plot' usando el microservicio de usuarios
     try:
         permissions = get_role_permissions_for_user_role(user_role_farm.user_role_id)
     except Exception as e:
         logger.error("No se pudieron obtener los permisos del rol: %s", str(e))
-        return create_response("error", "No se pudieron obtener los permisos del rol", status_code=500)
+        return None, create_response("error", "No se pudieron obtener los permisos del rol", status_code=500)
 
     if "add_plot" not in permissions:
-        logger.warning("El rol del usuario no tiene permiso para agregar un lote en la finca")
-        return create_response("error", "No tienes permiso para agregar un lote en esta finca")
+        return None, create_response("error", "No tienes permiso para agregar un lote en esta finca")
 
-    # Validar el nombre del lote
+    return user_role_farm, None
+
+def _validate_plot_data(db: Session, request, states):
+    """Validate plot name and check for duplicates."""
     if not request.name or not request.name.strip():
-        logger.warning("El nombre del lote no puede estar vacío o solo contener espacios")
-        return create_response("error", "El nombre del lote no puede estar vacío")
+        return None, create_response("error", "El nombre del lote no puede estar vacío")
     if len(request.name) > 100:
-        logger.warning("El nombre del lote es demasiado largo")
-        return create_response("error", "El nombre del lote no puede tener más de 100 caracteres")
+        return None, create_response("error", "El nombre del lote no puede tener más de 100 caracteres")
 
-    # Verificar si ya existe un lote ACTIVO con el mismo nombre en la finca
     existing_active_plot = db.query(Plots).filter(
         Plots.name == request.name,
         Plots.farm_id == request.farm_id,
-        Plots.plot_state_id == active_plot_state.plot_state_id
+        Plots.plot_state_id == states['active_plot'].plot_state_id
     ).first()
     if existing_active_plot:
-        logger.warning("Ya existe un lote activo con el nombre '%s' en la finca con ID %s", request.name, request.farm_id)
-        return create_response("error", f"Ya existe un lote activo con el nombre '{request.name}' en esta finca")
+        return None, create_response("error", f"Ya existe un lote activo con el nombre '{request.name}' en esta finca")
 
-    # Obtener el estado "Inactivo" para Plots
-    inactive_plot_state = get_state(db, "Inactivo", "Plots")
-    if not inactive_plot_state:
-        logger.error("No se encontró el estado 'Inactivo' para el tipo 'Plots'")
-        return create_response("error", "No se encontró el estado 'Inactivo' para el tipo 'Plots'", status_code=400)
-
-    # Obtener la variedad de café (validar antes de cualquier operación)
-    coffee_variety = db.query(CoffeeVarieties).filter(CoffeeVarieties.coffee_variety_id == request.coffee_variety_id).first()
+    coffee_variety = db.query(CoffeeVarieties).filter(
+        CoffeeVarieties.coffee_variety_id == request.coffee_variety_id
+    ).first()
     if not coffee_variety:
-        logger.warning("La variedad de café con ID '%s' no existe", request.coffee_variety_id)
-        return create_response("error", f"La variedad de café con ID '{request.coffee_variety_id}' no existe")
+        return None, create_response("error", f"La variedad de café con ID '{request.coffee_variety_id}' no existe")
 
-    # Verificar si existe un lote INACTIVO con el mismo nombre en la finca
+    return coffee_variety, None
+
+def _reactivate_inactive_plot(db: Session, request, states, coffee_variety):
+    """Reactivate an existing inactive plot."""
     existing_inactive_plot = db.query(Plots).filter(
         Plots.name == request.name,
         Plots.farm_id == request.farm_id,
-        Plots.plot_state_id == inactive_plot_state.plot_state_id
+        Plots.plot_state_id == states['inactive_plot'].plot_state_id
     ).first()
     
-    if existing_inactive_plot:
-        logger.info("Encontrado lote inactivo con el nombre '%s', reactivando y actualizando datos", request.name)
-        # Reactivar y actualizar el lote existente
-        existing_inactive_plot.plot_state_id = active_plot_state.plot_state_id
-        existing_inactive_plot.coffee_variety_id = request.coffee_variety_id
-        existing_inactive_plot.latitude = request.latitude
-        existing_inactive_plot.longitude = request.longitude
-        existing_inactive_plot.altitude = request.altitude
-        
-        try:
-            db.commit()
-            db.refresh(existing_inactive_plot)
-            logger.info("Lote reactivado y actualizado exitosamente con ID: %s", existing_inactive_plot.plot_id)
-            return create_response("success", "Lote reactivado y actualizado correctamente", {
-                "plot_id": existing_inactive_plot.plot_id,
-                "name": existing_inactive_plot.name,
-                "coffee_variety_id": coffee_variety.coffee_variety_id,
-                "latitude": float(existing_inactive_plot.latitude) if existing_inactive_plot.latitude else None,
-                "longitude": float(existing_inactive_plot.longitude) if existing_inactive_plot.longitude else None,
-                "altitude": float(existing_inactive_plot.altitude) if existing_inactive_plot.altitude else None,
-                "farm_id": existing_inactive_plot.farm_id,
-                "reactivated": True
-            })
-        except Exception as e:
-            db.rollback()
-            logger.error("Error al reactivar el lote: %s", str(e))
-            raise HTTPException(status_code=500, detail=f"Error al reactivar el lote: {str(e)}")
+    if not existing_inactive_plot:
+        return None
+    
+    logger.info("Encontrado lote inactivo con el nombre '%s', reactivando y actualizando datos", request.name)
+    existing_inactive_plot.plot_state_id = states['active_plot'].plot_state_id
+    existing_inactive_plot.coffee_variety_id = request.coffee_variety_id
+    existing_inactive_plot.latitude = request.latitude
+    existing_inactive_plot.longitude = request.longitude
+    existing_inactive_plot.altitude = request.altitude
+    
+    try:
+        db.commit()
+        db.refresh(existing_inactive_plot)
+        logger.info("Lote reactivado y actualizado exitosamente con ID: %s", existing_inactive_plot.plot_id)
+        return create_response("success", "Lote reactivado y actualizado correctamente", {
+            "plot_id": existing_inactive_plot.plot_id,
+            "name": existing_inactive_plot.name,
+            "coffee_variety_id": coffee_variety.coffee_variety_id,
+            "latitude": float(existing_inactive_plot.latitude) if existing_inactive_plot.latitude else None,
+            "longitude": float(existing_inactive_plot.longitude) if existing_inactive_plot.longitude else None,
+            "altitude": float(existing_inactive_plot.altitude) if existing_inactive_plot.altitude else None,
+            "farm_id": existing_inactive_plot.farm_id,
+            "reactivated": True
+        })
+    except Exception as e:
+        db.rollback()
+        logger.error("Error al reactivar el lote: %s", str(e))
+        raise HTTPException(status_code=500, detail=f"Error al reactivar el lote: {str(e)}")
 
-    # Crear el lote
+def _create_new_plot(db: Session, request, states, coffee_variety):
+    """Create a new plot."""
     try:
         new_plot = Plots(
             name=request.name,
@@ -139,7 +138,7 @@ def create_plot(request, user, db: Session):
             longitude=request.longitude,
             altitude=request.altitude,
             farm_id=request.farm_id,
-            plot_state_id=active_plot_state.plot_state_id
+            plot_state_id=states['active_plot'].plot_state_id
         )
         db.add(new_plot)
         db.commit()
@@ -158,3 +157,30 @@ def create_plot(request, user, db: Session):
         db.rollback()
         logger.error("Error al crear el lote: %s", str(e))
         raise HTTPException(status_code=500, detail=f"Error al crear el lote: {str(e)}")
+
+def create_plot(request, user, db: Session):
+    """
+    Lógica de negocio para crear un nuevo lote (plot) en una finca.
+    """
+    # Get required states
+    states, error_response = _get_required_states(db)
+    if error_response:
+        return error_response
+
+    # Validate farm access and permissions
+    _, error_response = _validate_farm_access(db, request, user, states)
+    if error_response:
+        return error_response
+
+    # Validate plot data
+    coffee_variety, error_response = _validate_plot_data(db, request, states)
+    if error_response:
+        return error_response
+
+    # Try to reactivate inactive plot
+    reactivation_response = _reactivate_inactive_plot(db, request, states, coffee_variety)
+    if reactivation_response:
+        return reactivation_response
+
+    # Create new plot
+    return _create_new_plot(db, request, states, coffee_variety)
