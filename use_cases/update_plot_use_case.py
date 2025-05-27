@@ -1,19 +1,24 @@
 from fastapi import HTTPException
 from utils.response import create_response
 from utils.state import get_state
-from models.models import Plots, Farms, UserRoleFarm, CoffeeVarieties, AreaUnits
+from models.models import Plots, Farms, UserRoleFarm, CoffeeVarieties
 import logging
 from adapters.user_client import get_user_role_ids, get_role_permissions_for_user_role
 from sqlalchemy.orm import Session # Added Session for type hinting
 
 logger = logging.getLogger(__name__)
 
+ERROR_PLOT_STATE_NOT_FOUND = "No se encontró el estado 'Activo' para el tipo 'Plots'"
+ERROR_FARM_NOT_FOUND_FOR_PLOT = "La finca asociada al lote no existe"
+ERROR_USER_ROLE_FARM_STATE_NOT_FOUND = "No se encontró el estado 'Activo' para el tipo 'user_role_farm'"
+ERROR_NO_PERMISSION_TO_EDIT_PLOT = "No tienes permiso para editar un lote en esta finca"
+
 def update_plot_general_info(request, user, db: Session):
     # Obtener el estado "Activo" para Plots
     active_plot_state = get_state(db, "Activo", "Plots")
     if not active_plot_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Plots'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plots'", status_code=400)
+        logger.error(ERROR_PLOT_STATE_NOT_FOUND)
+        return create_response("error", ERROR_PLOT_STATE_NOT_FOUND, status_code=400)
 
     # Obtener el lote
     plot = db.query(Plots).filter(Plots.plot_id == request.plot_id, Plots.plot_state_id == active_plot_state.plot_state_id).first()
@@ -24,14 +29,14 @@ def update_plot_general_info(request, user, db: Session):
     # Obtener la finca asociada al lote
     farm = db.query(Farms).filter(Farms.farm_id == plot.farm_id).first()
     if not farm:
-        logger.warning("La finca asociada al lote no existe")
-        return create_response("error", "La finca asociada al lote no existe")
+        logger.warning(ERROR_FARM_NOT_FOUND_FOR_PLOT)
+        return create_response("error", ERROR_FARM_NOT_FOUND_FOR_PLOT)
 
     # Obtener el estado "Activo" para UserRoleFarm
     active_urf_state = get_state(db, "Activo", "user_role_farm")
     if not active_urf_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
+        logger.error(ERROR_USER_ROLE_FARM_STATE_NOT_FOUND)
+        return create_response("error", ERROR_USER_ROLE_FARM_STATE_NOT_FOUND, status_code=400)
 
     # Obtener los user_role_ids del usuario desde el microservicio de usuarios
     try:
@@ -48,7 +53,7 @@ def update_plot_general_info(request, user, db: Session):
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
-        return create_response("error", "No tienes permiso para editar un lote en esta finca")
+        return create_response("error", ERROR_NO_PERMISSION_TO_EDIT_PLOT)
 
     # Verificar permiso 'edit_plot' usando el microservicio de usuarios
     try:
@@ -59,7 +64,7 @@ def update_plot_general_info(request, user, db: Session):
 
     if "edit_plot" not in permissions:
         logger.warning("El rol del usuario no tiene permiso para editar el lote en la finca")
-        return create_response("error", "No tienes permiso para editar un lote en esta finca")
+        return create_response("error", ERROR_NO_PERMISSION_TO_EDIT_PLOT)
 
     # Validar el nombre del lote
     if not request.name or not request.name.strip():
@@ -112,8 +117,8 @@ def update_plot_location(request, user, db):
     # Obtener el estado "Activo" para Plots
     active_plot_state = get_state(db, "Activo", "Plots")
     if not active_plot_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Plots'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plots'", status_code=400)
+        logger.error(ERROR_PLOT_STATE_NOT_FOUND)
+        return create_response("error", ERROR_PLOT_STATE_NOT_FOUND, status_code=400)
 
     # Obtener el lote
     plot = db.query(Plots).filter(Plots.plot_id == request.plot_id, Plots.plot_state_id == active_plot_state.plot_state_id).first()
@@ -124,14 +129,14 @@ def update_plot_location(request, user, db):
     # Obtener la finca asociada al lote
     farm = db.query(Farms).filter(Farms.farm_id == plot.farm_id).first()
     if not farm:
-        logger.warning("La finca asociada al lote no existe")
-        return create_response("error", "La finca asociada al lote no existe")
+        logger.warning(ERROR_FARM_NOT_FOUND_FOR_PLOT)
+        return create_response("error", ERROR_FARM_NOT_FOUND_FOR_PLOT)
 
     # Obtener el estado "Activo" para UserRoleFarm
     active_urf_state = get_state(db, "Activo", "user_role_farm")
     if not active_urf_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
+        logger.error(ERROR_USER_ROLE_FARM_STATE_NOT_FOUND)
+        return create_response("error", ERROR_USER_ROLE_FARM_STATE_NOT_FOUND, status_code=400)
 
     # Obtener los user_role_ids del usuario desde el microservicio de usuarios
     try:
@@ -148,7 +153,7 @@ def update_plot_location(request, user, db):
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
-        return create_response("error", "No tienes permiso para editar un lote en esta finca")
+        return create_response("error", ERROR_NO_PERMISSION_TO_EDIT_PLOT)
 
     # Verificar permiso 'edit_plot' usando el microservicio de usuarios
     try:
@@ -159,7 +164,7 @@ def update_plot_location(request, user, db):
 
     if "edit_plot" not in permissions:
         logger.warning("El rol del usuario no tiene permiso para editar el lote en la finca")
-        return create_response("error", "No tienes permiso para editar un lote en esta finca")
+        return create_response("error", ERROR_NO_PERMISSION_TO_EDIT_PLOT)
 
     # Actualizar la ubicación del lote
     try:
