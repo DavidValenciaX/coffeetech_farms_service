@@ -69,16 +69,16 @@ def update_plot_general_info(request, user, db: Session):
         logger.warning("El nombre del lote es demasiado largo")
         return create_response("error", "El nombre del lote no puede tener más de 100 caracteres")
 
-    # Verificar si ya existe un lote con el mismo nombre en la finca
-    existing_plot = db.query(Plots).filter(
+    # Verificar si ya existe un lote ACTIVO con el mismo nombre en la finca (excluyendo el lote actual)
+    existing_active_plot = db.query(Plots).filter(
         Plots.name == request.name,
         Plots.farm_id == farm.farm_id,
         Plots.plot_id != request.plot_id,
         Plots.plot_state_id == active_plot_state.plot_state_id
     ).first()
-    if existing_plot:
-        logger.warning("Ya existe un lote con el nombre '%s' en la finca con ID %s", request.name, farm.farm_id)
-        return create_response("error", f"Ya existe un lote con el nombre '{request.name}' en esta finca")
+    if existing_active_plot:
+        logger.warning("Ya existe un lote activo con el nombre '%s' en la finca con ID %s", request.name, farm.farm_id)
+        return create_response("error", f"Ya existe un lote activo con el nombre '{request.name}' en esta finca")
 
     # Obtener la variedad de café
     coffee_variety = db.query(CoffeeVarieties).filter(CoffeeVarieties.coffee_variety_id == request.coffee_variety_id).first()

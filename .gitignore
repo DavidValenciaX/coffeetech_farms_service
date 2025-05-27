@@ -65,3 +65,5 @@ yarn.lock
 
 # Firebase credentials
 serviceAccountKey.json
+
+actual_db_representation.sql
