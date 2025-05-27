@@ -23,6 +23,8 @@ router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
+INVALID_SESSION_TOKEN_MESSAGE = "Token de sesión inválido o usuario no encontrado"
+
 # Endpoint para crear un lote
 @router.post("/create-plot")
 def create_plot_endpoint(request: CreatePlotRequest, session_token: str, db: Session = Depends(get_db_session)):
@@ -31,7 +33,7 @@ def create_plot_endpoint(request: CreatePlotRequest, session_token: str, db: Ses
     """
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
     return create_plot(request, user, db)
 
@@ -43,7 +45,7 @@ def update_plot_general_info_endpoint(request: UpdatePlotGeneralInfoRequest, ses
     """
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
     return update_plot_general_info(request, user, db)
 
@@ -55,7 +57,7 @@ def update_plot_location_endpoint(request: UpdatePlotLocationRequest, session_to
     """
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
     return update_plot_location(request, user, db)
 
@@ -76,7 +78,7 @@ def list_plots_endpoint(farm_id: int, session_token: str, db: Session = Depends(
     """
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
     return list_plots(farm_id, user, db)
 
@@ -98,7 +100,7 @@ def get_plot_endpoint(plot_id: int, session_token: str, db: Session = Depends(ge
 
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
 
     return get_plot(plot_id, user, db)
@@ -121,7 +123,7 @@ def delete_plot_endpoint(plot_id: int, session_token: str, db: Session = Depends
 
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
-        return create_response("error", "Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
+        return create_response("error", INVALID_SESSION_TOKEN_MESSAGE)
 
     return delete_plot(plot_id, user, db)

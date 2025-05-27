@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+INVALID_SESSION_TOKEN_MESSAGE = "Token de sesión inválido o usuario no encontrado"
+
 @router.post("/create-farm")
 def create_farm_endpoint(request: CreateFarmRequest, session_token: str, db: Session = Depends(get_db_session)):
     """
@@ -34,7 +36,7 @@ def create_farm_endpoint(request: CreateFarmRequest, session_token: str, db: Ses
     """
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
     return create_farm(request, user, db)
 
@@ -45,7 +47,7 @@ def list_farm_endpoint(session_token: str, db: Session = Depends(get_db_session)
     """
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
     return list_farms(user, db, ListFarmResponse)
 
@@ -56,7 +58,7 @@ def update_farm_endpoint(request: UpdateFarmRequest, session_token: str, db: Ses
     """
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
     return update_farm(request, user, db)
 
@@ -79,7 +81,7 @@ def get_farm_endpoint(farm_id: int, session_token: str, db: Session = Depends(ge
     """
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
         return session_token_invalid_response()
     return get_farm(farm_id, user, db, ListFarmResponse)
 
@@ -106,7 +108,7 @@ def delete_farm_endpoint(farm_id: int, session_token: str, db: Session = Depends
     # Verificar el token de sesión
     user = verify_session_token(session_token)
     if not user:
-        logger.warning("Token de sesión inválido o usuario no encontrado")
-        return create_response("error", "Token de sesión inválido o usuario no encontrado")
+        logger.warning(INVALID_SESSION_TOKEN_MESSAGE)
+        return create_response("error", INVALID_SESSION_TOKEN_MESSAGE)
     
     return delete_farm(farm_id, user, db)
