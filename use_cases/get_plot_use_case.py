@@ -1,4 +1,4 @@
-from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties, AreaUnits
+from models.models import Farms, UserRoleFarm, Plots, CoffeeVarieties
 from utils.response import create_response
 from utils.state import get_state
 import logging
